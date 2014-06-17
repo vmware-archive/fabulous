@@ -1,0 +1,22 @@
+{
+  "name": "what",
+  "version": "0.0.1",
+  "authors": [
+    "Brian Cavalier <brian@hovercraftstudios.com>"
+  ],
+  "main": "main",
+  "moduleType": "node",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "rave": "*",
+    "when": "~3",
+    "jiff": "~0.5"
+  }
+}

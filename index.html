@@ -1,0 +1,26 @@
+<!doctype html>
+<html data-debug data-rave-meta="bower.json">
+<head>
+    <title>offline sync</title>
+    <script src="bower_components/rave/rave.js"></script>
+</head>
+<body>
+    <form data-on-submit="add">
+        <input name="value" required/>
+        <button>Add</button>
+    </form>
+
+    <label><input type="checkbox" name="online" data-on-change="pause" checked/>Online</label>
+    <button class="removeAll" data-on-click="removeAll">Clear</button>
+    <button class="prev" data-on-click="history.prev">Prev</button>
+    <button class="next" data-on-click="history.next">Next</button>
+
+    <ul class="item-list">
+        <li data-list>
+            <input type="hidden" name="id"/>
+            <input type="text" name="value"/>
+            <span data-on-click="remove">&times;</span>
+        </li>
+    </ul>
+</body>
+</html>
