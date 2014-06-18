@@ -65,11 +65,12 @@ function bindEvents (exports, root) {
 
 function initBindings (nodes, context) {
 	return Array.prototype.reduce.call(nodes, function (context, node) {
-		var model = node.getAttribute('data-model');
-		var sync = context['_' + model + 'Sync'] = new Sync([
-			new Dom(node),
-			new Property(context, model)
-		]);
+		var key = node.getAttribute('data-model');
+		var model = context[key];
+
+		var property = isSync(model) ? model : new Property(context, key);
+
+		var sync = context['_' + key + 'Sync'] = new Sync([new Dom(node), property]);
 
 		context.scheduler.add(function () {
 			sync.sync();
@@ -78,4 +79,8 @@ function initBindings (nodes, context) {
 
 		return context;
 	}, context);
+}
+
+function isSync(x) {
+	return x != null && typeof x.diff === 'function' && typeof x.patch === 'function';
 }

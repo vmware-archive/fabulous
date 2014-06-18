@@ -1,5 +1,3 @@
-var when = require('when');
-
 module.exports = transition;
 
 function transition(push, pop, to, from, state) {

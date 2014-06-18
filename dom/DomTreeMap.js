@@ -17,7 +17,6 @@ define(function(require) {
 	function DomTreeMap(node) {
 		this._root = node;
 		this.rebuild();
-		console.log('tree',this._tree);
 	}
 
 	DomTreeMap.prototype = {
