@@ -1,5 +1,6 @@
 var jiff = require('jiff');
 var jsonPointer = require('jiff/lib/jsonPointer');
+var when = require('when');
 
 module.exports = Property;
 
@@ -8,9 +9,18 @@ function Property(object, path) {
 	this.path = path;
 }
 
+// TODO: What if property is a function?
+
 Property.prototype.diff = function(data) {
 	var p = jsonPointer.find(this.object, this.path);
-	return jiff.diff(data, p.target[p.key], id);
+	var val = p.target[p.key];
+
+	if(when.isPromiseLike(val)) {
+		var i = when(val).inspect();
+		val = i.state === 'fulfilled' ? i.value : void 0;
+	}
+
+	return val === void 0 ? void 0 : jiff.diff(data, val, id);
 };
 
 Property.prototype.patch = function(patch) {
@@ -27,8 +37,11 @@ Property.prototype.patch = function(patch) {
 	}
 };
 
+// TODO: Need something better than just a single method
+// 1) stream?
 Property.prototype.onChange = function() {};
 
+// FIXME: Not a good general default
 function id(x) {
 	return x.id;
 }

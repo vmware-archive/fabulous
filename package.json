@@ -7,9 +7,7 @@
   "main": "server",
   "license": "MIT",
   "dependencies": {
-    "express": "~3",
     "jiff": "~0.5",
-    "when": "^3.2.3",
-    "ws": "~0.4"
+    "when": "~3"
   }
 }

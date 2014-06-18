@@ -109,7 +109,10 @@ define(function(require) {
 		if(valueNode) {
 			this._map.add(path, valueNode);
 		}
-		return dom.setValue(valueNode, value);
+		var nodes = this._map.findNodes(path);
+		return nodes.map(function(node) {
+			return dom.setValue(node, value);
+		});
 	};
 
 	DomBuilder.prototype._setNodeValueArray = function(insertChild, path, value, list) {
