@@ -31,7 +31,13 @@ Sync.prototype = {
 	_syncClientIndex: function(client, start) {
 		var patch = client.diff(this.data);
 		if(patch && patch.length) {
-			this.data = jiff.patch(patch, this.data);
+			try {
+				this.data = jiff.patch(patch, this.data);
+			} catch(e) {
+				console.log(this.data);
+				console.log(patch);
+				console.error(e);
+			}
 
 			var clientsWindow = this.clients.concat(this.clients)
 				.slice(start, start + this.clients.length - 1);

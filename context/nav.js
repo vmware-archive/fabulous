@@ -1,46 +1,39 @@
-var NavContext = require('../nav/NavContext');
+var most = require('most');
+
+var runContext = require('./runContext');
+var path = require('../lib/path');
 var transition = require('../nav/transition');
+var curry = require('../lib/fn').curry;
 
-module.exports = function nav(builder) {
-	return function(context) {
-		// TODO: Should have to create this. It should be provided
-		// ie context.navigation or something
-		context.navigation = NavContext.create();
+module.exports = curry(function nav(builder, context) {
+	context.navigation = most(function (emit) {
+		var current = location.hash.slice(1);
 
-		var destroy = builder(context);
+		var state = navigate(current, '', []);
 
-		// TODO: This startup should happen in some framework initialization/setup
-		// module or the base application context, etc.
-		context.navigation = navigate(location.hash.slice(1), '', context.navigation);
 		window.addEventListener('hashchange', handleNavChange);
 
-		return function(context) {
-			window.removeEventListener('hashchange', handleNavChange)
-			destroy(context);
-		};
-
-		function handleNavChange(e) {
-			context.navigation = navigate(e.newURL.split('#')[1],
-				e.oldURL.split('#')[1], context.navigation);
+		function handleNavChange (e) {
+			var prev = e.oldURL.split('#')[1];
+			var next = e.newURL.split('#')[1];
+			state = navigate(next, prev, state);
 		}
-	}
-};
 
-// TODO: These should be moved to what/nav/something
-function navigate(to, from, s) {
-	return transition(push, pop, parsePath(to), parsePath(from), s)
-}
+		function navigate (to, from, state) {
+			return transition(push, pop, path.split(to), path.split(from), state);
+		}
 
-function parsePath(p) {
-	return p ? p.split('/') : [];
-}
+		function push (state, path) {
+			state = state.concat(path);
+			emit({ action: 1, stack: state, path: state.join('/') });
+			return state;
+		}
 
-function push(nav, s) {
-//	console.log('push', s);
-	return nav.push(s);
-}
+		function pop (state) {
+			emit({ action: -1, stack: state, path: state.join('/') });
+			return state.slice(0, -1);
+		}
+	});
 
-function pop(nav, s) {
-//	console.log('pop', s);
-	return nav.pop();
-}
+	return runContext(builder, context);
+});

@@ -28,7 +28,8 @@ Property.prototype.patch = function(patch) {
 		return;
 	}
 
-	var p = jsonPointer.find(this.object, this.path)
+	// TODO: Handle patching promised properties
+	var p = jsonPointer.find(this.object, this.path);
 	var data = jiff.patch(patch, p.target[p.key]);
 	p.target[p.key] = data;
 

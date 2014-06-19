@@ -143,10 +143,12 @@ define(function(require) {
 
 	DomBuilder.prototype._addNodeValueObject = function(path, object, node) {
 		var child = this._create(path);
-		node.appendChild(child);
-		this._map.add(path, child);
+		if(child) {
+			node.appendChild(child);
+			this._map.add(path, child);
 
-		return this._replaceNodeValue(path, object, child);
+			return this._replaceNodeValue(path, object, child);
+		}
 	};
 
 	DomBuilder.prototype._findListChild = function(node) {

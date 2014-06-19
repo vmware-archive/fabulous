@@ -9,7 +9,7 @@ function compile(x) {
 function compileRegExp(routeRegExp) {
 	return function(path) {
 		var match = routeRegExp.exec(path);
-		return match && match.slice(1);
+		return match != null && match.slice(1);
 	}
 }
 

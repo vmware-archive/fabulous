@@ -15,7 +15,7 @@ module.exports = EventDispatcher;
 
 var eventAttrs = ['change', 'submit', 'click', 'dblclick', 'keypress']
 	.reduce(function(eventAttrs, e) {
-		eventAttrs['on' + e] = e;
+		eventAttrs['data-on' + e] = e;
 		return eventAttrs;
 	}, Object.create(null));
 

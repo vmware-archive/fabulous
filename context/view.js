@@ -6,24 +6,26 @@ var Sync = require('../data/Sync');
 var Property = require('../data/Property');
 var Dom = require('../dom/Dom');
 var form = require('../dom/form');
+var curry = require('../lib/fn').curry;
 
-module.exports = buildViewContext;
+module.exports = curry(buildViewContext);
 
-function buildViewContext(node, builder) {
+function buildViewContext(node, builder, context) {
+	var child = Object.create(context);
+
+	context._events = bindEvents(child, node);
+
+	var destroy = builder(node, child);
+
+	child = initBindings(node.querySelectorAll('[data-model]'), child);
+
+	if(typeof destroy !== 'function') {
+		return disposeEvents;
+	}
+
 	return function(context) {
-		context._events = bindEvents(context, node);
-		var destroy = builder(node, context);
-
-		context = initBindings(node.querySelectorAll('[data-model]'), context);
-
-		if(typeof destroy !== 'function') {
-			return disposeEvents;
-		}
-
-		return function(context) {
-			disposeEvents(context);
-			return destroy(context);
-		};
+		disposeEvents(child);
+		return destroy(context);
 	};
 }
 

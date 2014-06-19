@@ -1,15 +1,17 @@
 var when = require('when');
 var Scheduler = require('../data/Scheduler');
+var runContext = require('./runContext');
+var curry = require('../lib/fn').curry;
 
-module.exports = function sync(builder) {
+module.exports = curry(function sync(builder, context) {
+	context.scheduler = new Scheduler();
+
+	var destroy = runContext(builder, context);
+
 	return function(context) {
-		context.scheduler = new Scheduler();
-		var destroy = builder(context);
-		return function(context) {
-			return when(destroy(context)).tap(shutdown);
-			function shutdown() {
-				context.scheduler.shutdown();
-			}
-		};
+		return when(destroy(context)).tap(shutdown);
+		function shutdown() {
+			context.scheduler.shutdown();
+		}
 	};
-};
+});

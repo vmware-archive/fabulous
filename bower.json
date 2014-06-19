@@ -1,22 +1,23 @@
 {
-  "name": "what",
+  "name": "hovercraft",
   "version": "0.0.1",
   "authors": [
     "Brian Cavalier <brian@hovercraftstudios.com>"
   ],
   "main": "main",
-  "moduleType": "node",
+  "moduleType": ["node"],
   "license": "MIT",
   "ignore": [
     "**/.*",
     "node_modules",
     "bower_components",
     "test",
-    "tests"
+    "tests",
+    "package.json"
   ],
   "dependencies": {
-    "rave": "*",
     "when": "~3",
-    "jiff": "~0.5"
+    "jiff": "~0.5",
+    "most": "~0.4"
   }
 }
