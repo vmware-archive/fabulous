@@ -4,11 +4,12 @@
   "authors": [
     "Brian Cavalier <brian@hovercraftstudios.com>"
   ],
-  "main": "server",
+  "main": "main",
   "license": "MIT",
   "dependencies": {
     "jiff": "~0.5",
-    "when": "~3",
-	"most": "~0.4"
+	"most": "~0.4",
+    "rest": "~1.1",
+    "when": "~3.2"
   }
 }
