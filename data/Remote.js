@@ -2,6 +2,7 @@ var jiff = require('jiff');
 var when = require('when');
 
 var createConnection = require('../connection/createConnection');
+var defaultHash = require('./defaultHash');
 
 module.exports = Remote;
 
@@ -13,7 +14,7 @@ function Remote(handler, data) {
 }
 
 Remote.prototype.diff = function(data) {
-	return jiff.diff(data, this.data, id);
+	return jiff.diff(data, this.data, defaultHash);
 };
 
 Remote.prototype.patch = function(patch) {
@@ -77,7 +78,3 @@ Remote.prototype._fireChange = function(x) {
 		this.onChange.call(void 0, x);
 	}
 };
-
-function id(x) {
-	return x.id;
-}

@@ -1,4 +1,5 @@
-var JsonMetadata = require('./metadata/JsonMetadata');
+var jiff = require('jiff');
+var defaultHash = require('./defaultHash');
 
 module.exports = LocalStorage;
 
@@ -6,22 +7,18 @@ module.exports = LocalStorage;
  * A LocalStorage datasource
  * @constructor
  */
-function LocalStorage(namespace, init, identify) {
+function LocalStorage(namespace, init) {
 	this._namespace = namespace || '';
 	this._init = init || defaultInit;
-	this.metadata = new JsonMetadata(function(x) {
-		return x.id;
-	});
 }
 
 LocalStorage.prototype = {
 	diff: function(shadow) {
-		return this.metadata.diff(shadow, this._load());
+		return jiff.diff(shadow, this._load(), defaultHash);
 	},
 
 	patch: function(patch) {
-		var data = this._load();
-		this._save(this.metadata.patch(data, patch));
+		this._save(jiff.patch(patch, this._load()));
 	},
 
 	_load: function() {

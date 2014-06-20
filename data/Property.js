@@ -1,6 +1,7 @@
 var when = require('when');
 var jiff = require('jiff');
 var jsonPointer = require('jiff/lib/jsonPointer');
+var defaultHash = require('./defaultHash');
 
 module.exports = Property;
 
@@ -19,7 +20,7 @@ Property.prototype.diff = function(data) {
 		x = valueOf(x);
 	}
 
-	return x === void 0 ? void 0 : jiff.diff(data, x, id);
+	return x === void 0 ? void 0 : jiff.diff(data, x, defaultHash);
 };
 
 Property.prototype.patch = function(patch) {
@@ -50,11 +51,6 @@ Property.prototype.patch = function(patch) {
 // TODO: Need something better than just a single method
 // 1) stream?
 Property.prototype.onChange = function() {};
-
-// FIXME: Not a good general default
-function id(x) {
-	return x.id;
-}
 
 function valueOf(promise) {
 	var i = when(promise).inspect();

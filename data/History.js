@@ -1,4 +1,5 @@
 var jiff = require('jiff');
+var defaultHash = require('./defaultHash');
 
 module.exports = History;
 
@@ -7,9 +8,7 @@ function History(zipper) {
 }
 
 History.prototype.diff = function(data) {
-	return jiff.diff(data, this.zipper.data, function id(x) {
-		return x.id;
-	});
+	return jiff.diff(data, this.zipper.data, defaultHash);
 };
 
 History.prototype.patch = function(p) {
