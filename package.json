@@ -1,10 +1,10 @@
 {
   "name": "hovercraft",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "authors": [
     "Brian Cavalier <brian@hovercraftstudios.com>"
   ],
-  "main": "main",
+  "main": "hovercraft",
   "license": "MIT",
   "dependencies": {
     "jiff": "~0.5",
