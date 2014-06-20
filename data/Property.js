@@ -13,22 +13,13 @@ function Property(object, path) {
 
 Property.prototype.diff = function(data) {
 	var p = jsonPointer.find(this.object, this.path);
-	var val = p.target[p.key];
+	var x = p.target[p.key];
 
-	if(when.isPromiseLike(val)) {
-		var i = when(val).inspect();
-		if(i.state === 'pending') {
-			return;
-		}
-
-		if(i.state === 'fulfilled') {
-			val = i.value;
-		} else {
-			throw i.reason;
-		}
+	if(when.isPromiseLike(x)) {
+		x = valueOf(x);
 	}
 
-	return val === void 0 ? void 0 : jiff.diff(data, val, id);
+	return x === void 0 ? void 0 : jiff.diff(data, x, id);
 };
 
 Property.prototype.patch = function(patch) {
@@ -37,30 +28,23 @@ Property.prototype.patch = function(patch) {
 	}
 
 	var p = jsonPointer.find(this.object, this.path);
-	var val = p.target[p.key];
+	var x = p.target[p.key];
 	var onChange = this.onChange;
+	var patched;
 
-	if(when.isPromiseLike(val)) {
+	if(when.isPromiseLike(x)) {
 		// Promise. allow it to remain a promise, ie don't
 		// overwrite with a non-promise value
-		p.target[p.key] = when(val, function(val) {
-			var data = jiff.patch(patch, val);
-
-			if(typeof onChange === 'function') {
-				onChange(data);
-			}
-
-			return data;
+		patched = p.target[p.key] = when(x, function(x) {
+			return jiff.patch(patch, x);
 		});
 	} else {
 		// Non-promise
-		var data = jiff.patch(patch, val);
-		p.target[p.key] = data;
-
-		if(typeof onChange === 'function') {
-			onChange(data);
-		}
+		patched = p.target[p.key] = jiff.patch(patch, x);
 	}
+
+	// Always fire async
+	when(patched, onChange);
 };
 
 // TODO: Need something better than just a single method
@@ -70,4 +54,17 @@ Property.prototype.onChange = function() {};
 // FIXME: Not a good general default
 function id(x) {
 	return x.id;
+}
+
+function valueOf(promise) {
+	var i = when(promise).inspect();
+	if(i.state === 'pending') {
+		return;
+	}
+
+	if(i.state === 'fulfilled') {
+		return i.value;
+	} else {
+		throw i.reason;
+	}
 }

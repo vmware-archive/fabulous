@@ -1,7 +1,7 @@
 var jiff = require('jiff');
 var when = require('when');
 
-var createConnection = require('./../connection/createConnection');
+var createConnection = require('../connection/createConnection');
 
 module.exports = Remote;
 
@@ -27,10 +27,12 @@ Remote.prototype.patch = function(patch) {
 Remote.prototype.connect = function(endpoint) {
 	this._connection = this._createConnection(endpoint);
 	this._handler.initConnection(this._connection);
+	return this;
 };
 
 Remote.prototype.listen = function(endpoint) {
 	this._connection = this._createConnection(endpoint);
+	return this;
 };
 
 Remote.prototype._createConnection = function(endpoint) {

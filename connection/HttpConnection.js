@@ -12,7 +12,7 @@ function HttpConnection(send, handler, handleError) {
 HttpConnection.prototype.send = function(data) {
 	var send = this._send;
 	this._queue = this._queue.then(function() {
-		return send(void 0, data);
+		return send(data);
 	}).then(this._handler).catch(this._handleError);
 };
 
