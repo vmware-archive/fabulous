@@ -3,52 +3,64 @@ var Dom = require('../dom/dom');
 var Property = require('../data/Property');
 var Sync = require('../data/Sync');
 var path = require('../lib/path');
+var events = require('./events');
 
-var reduce = fn.reduce;
-var map = fn.map;
-
-var eventAttrs = reduce(function(eventAttrs, e) {
+var eventAttrs = fn.reduce(function(eventAttrs, e) {
 	eventAttrs['data-on' + e] = e;
 	return eventAttrs;
-}, Object.create(null), ['change', 'submit', 'click', 'dblclick', 'keypress']);
-
-var eventTypes = reduce(function(types, attr) {
-	types[eventAttrs[attr]] = attr;
-	return types;
-}, Object.create(null), Object.keys(eventAttrs));
+}, Object.create(null), ['change', 'submit', 'click', 'dblclick', 'keypress', 'focus', 'blur']);
 
 module.exports = scanner;
 
-function scanner(node, context) {
-	return scan(node, node, context);
+// TODO: scanner should return something sensible,
+// possibly a new destroy function that will clean up
+// all the things it did.
+function scanner(node, state) {
+	return scanView(void 0, node, state);
 }
 
-function scan(root, node, context) {
-	context = processEvents(root, node, context);
+function scan(node, state) {
+	var s = node.getAttribute('data-view');
+	if(s) {
+		state = scanView(s, node, pushState(state));
+	} else {
+		state = collectEvents(node, scanChildren(node, state));
+	}
 
 	if(node.hasAttribute('data-model')) {
-		context = processModel(node.getAttribute('data-model'), node, context);
+		state = initModel(node.getAttribute('data-model'), node, state);
 	}
 
-	s = node.getAttribute('data-view');
-	if(s) {
-		return scanView(s, node, context)
-	} else {
-		return scanChildren(root, node, context);
-	}
+	return state;
 }
 
-function processEvents(root, node, context) {
-	return reduce(function(context, attr) {
+function collectEvents(node, state) {
+	return fn.reduce(function(state, attr) {
 		var name = attr.name;
 		if(eventAttrs[name] !== void 0) {
-			console.log(name, eventAttrs[name], root);
+			// TODO: This needs to collect both the node and the name
+			// Since some events (blur, focus) don't bubble, we have to
+			// directly attach some handlers
+			state.events[eventAttrs[name]] = name;
 		}
-		return context;
-	}, context, node.attributes);
+		return state;
+	}, state, node.attributes);
 }
 
-function processModel(name, node, context) {
+function addEvents(node, state) {
+	var handler = events.handler(state.context, node);
+	var finder = events.findNode(state.events, node);
+	var dispatcher = events.dispatch(finder, handler);
+	state.eventDispatcher = dispatcher;
+
+	return Object.keys(state.events).reduce(function(node, event) {
+		node.addEventListener(event, dispatcher, false);
+		return node;
+	}, node);
+}
+
+function initModel(name, node, state) {
+	var context = state.context;
 	var model = find(name, context);
 
 	var property = isSync(model) ? model : new Property(context, name);
@@ -59,28 +71,27 @@ function processModel(name, node, context) {
 		return 20;
 	});
 
-	return context;
+	return state;
 }
 
-function scanView(name, node, context) {
-	var create = context[name];
+function scanView(name, node, state) {
+	var create = state.context[name];
 
-	// TODO: throw if create !== function?
-	var child = typeof create === 'function'
-		? createView(node, create, Object.create(context))
-		: Object.create(context);
+	if(typeof create === 'function') {
+		create(node, state.context);
+	}
 
-	return scanChildren(node, node, child);
+	var newState = scanChildren(node, state);
+	newState = collectEvents(node, newState);
+	addEvents(node, newState);
+	return newState;
 }
 
-function createView(node, builder, context) {
-	return builder(node, scanner(node, context));
-}
-
-function scanChildren(root, node, context) {
-	return fn.chain(function(node) {
-		return scan(root, node, context);
-	}, node.children);
+function scanChildren(node, state) {
+	return fn.reduce(function(state, node) {
+		scan(node, state);
+		return state;
+	}, state, node.children);
 }
 
 function find(p, o) {
@@ -92,3 +103,11 @@ function find(p, o) {
 function isSync(x) {
 	return x != null && typeof x.diff === 'function' && typeof x.patch === 'function';
 }
+
+function pushState(s) {
+	return Object.create(s, {
+		context: { value: Object.create(s.context) },
+		events: { value: Object.create(null) }
+	});
+}
+
