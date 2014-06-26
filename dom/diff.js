@@ -8,106 +8,101 @@
  * @author John Hann
  */
 
-(function(define) { 'use strict';
-define(function(require) {
+var dom = require('../lib/dom');
+var isListNode = require('../lib/domPointer').isListNode;
+var path = require('../lib/path');
 
-	var dom = require('../lib/dom');
-	var isListNode = require('../lib/domPointer').isListNode;
-	var path = require('../lib/path');
+module.exports = function diffDataAndDom(reg, data, patch) {
+	return diff(reg, Object.create(null), patch||[], '', data, reg.findNode(''));
+};
 
-	return function diffDataAndDom(reg, data) {
-		return diff(reg, {}, [], '', data, reg.findNode(''));
-	};
+function diff(reg, seen, patch, basePath, value, node) {
+	var nodeValue;
 
-	function diff(reg, seen, patch, basePath, value, node) {
-		var nodeValue;
+	seen[basePath] = 1;
 
-		seen[basePath] = 1;
+	if(isContainer(value)) {
+		return bfs(reg, seen, patch, basePath, value);
+	}
 
-		if(isContainer(value)) {
-			return bfs(reg, seen, patch, basePath, value);
-		}
+	nodeValue = dom.getValue(node);
+	if(nodeValue != value) {
+		patch.push({
+			op: 'test',
+			path: basePath,
+			value: value
+		});
+		patch.push({
+			op: 'replace',
+			path: basePath,
+			value: nodeValue
+		});
+	}
+	return patch;
+}
 
-		nodeValue = dom.getValue(node);
-		if(nodeValue != value) {
+function bfs(reg, seen, patch, basePath, data) {
+	if(Array.isArray(data)) {
+		return diffArray(reg, seen, patch, basePath, data);
+	}
+
+	return Object.keys(data).reduce(function(patch, key) {
+
+		var local = path.join(basePath, key);
+		var nodes = reg.findNodes(local);
+
+		if(nodes.length === 0) {
 			patch.push({
 				op: 'test',
 				path: basePath,
-				value: value
+				value: data[key]
 			});
 			patch.push({
-				op: 'replace',
-				path: basePath,
-				value: nodeValue
+				op: 'remove',
+				path: local
 			});
-		}
-		return patch;
-	}
 
-	function bfs(reg, seen, patch, basePath, data) {
-		if(Array.isArray(data)) {
-			return diffArray(reg, seen, patch, basePath, data);
+			return patch;
 		}
 
-		return Object.keys(data).reduce(function(patch, key) {
-
-			var local = path.join(basePath, key);
-			var nodes = reg.findNodes(local);
-
-			if(nodes.length === 0) {
-				patch.push({
-					op: 'test',
-					path: basePath,
-					value: data[key]
-				});
-				patch.push({
-					op: 'remove',
-					path: local
-				});
-
-				return patch;
-			}
-
-			return nodes.reduce(function(patch, node) {
-				return diff(reg, seen, patch, local, data[key], node);
-			}, patch);
-
+		return nodes.reduce(function(patch, node) {
+			return diff(reg, seen, patch, local, data[key], node);
 		}, patch);
-	}
 
-	function diffArray(reg, seen, patch, basePath, array) {
-		var parents = reg.findNodes(basePath);
+	}, patch);
+}
 
-		return parents.reduce(function(patch, parent) {
-			var list = findListChild(parent);
-			if(!list) {
-				// TODO: throw?
-				return patch;
-			}
+function diffArray(reg, seen, patch, basePath, array) {
+	var parents = reg.findNodes(basePath);
 
-			return array.reduce(function(patch, value, i) {
-				return diff(reg, seen, patch, path.join(basePath, ''+i), value, list.children[i]);
-			}, patch);
+	return parents.reduce(function(patch, parent) {
+		var list = findListChild(parent);
+		if(!list) {
+			// TODO: throw?
+			return patch;
+		}
+
+		return array.reduce(function(patch, value, i) {
+			return diff(reg, seen, patch, path.join(basePath, ''+i), value, list.children[i]);
 		}, patch);
+	}, patch);
+}
+
+function isContainer(x) {
+	return x && !(x instanceof Date) && (Array.isArray(x) || typeof x === 'object');
+}
+
+function findListChild(node) {
+	if(isListNode(node)) {
+		return node;
 	}
 
-	function isContainer(x) {
-		return x && !(x instanceof Date) && (Array.isArray(x) || typeof x === 'object');
-	}
-
-	function findListChild(node) {
+	var children = node.children;
+	for(var i=0; i<children.length; ++i) {
+		node = children[i];
 		if(isListNode(node)) {
 			return node;
 		}
-
-		var children = node.children;
-		for(var i=0; i<children.length; ++i) {
-			node = children[i];
-			if(isListNode(node)) {
-				return node;
-			}
-		}
 	}
+}
 
-});
-}(typeof define === 'function' && define.amd ? define : function(factory) { module.exports = factory(require); }));

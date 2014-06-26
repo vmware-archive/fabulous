@@ -13,8 +13,8 @@ function LocalStorage(namespace, init) {
 }
 
 LocalStorage.prototype = {
-	diff: function(shadow) {
-		return jiff.diff(shadow, this._load(), defaultHash);
+	diff: function(data) {
+		return jiff.diff(data, this._load(), defaultHash);
 	},
 
 	patch: function(patch) {
@@ -24,14 +24,11 @@ LocalStorage.prototype = {
 	_load: function() {
 		var data = localStorage.getItem(this._namespace);
 		if(data == null) {
-			data = typeof this._init === 'function'
-				? this._init.call(void 0)
-				: this._init;
+			var init = this._init;
+			return typeof init === 'function' ? init() : init;
 		} else {
-			data = JSON.parse(data);
+			return JSON.parse(data);
 		}
-
-		return data;
 	},
 
 	_save: function(data) {

@@ -9,11 +9,11 @@ Observer.fromProperty = function(key, object) {
 };
 
 Observer.fromFunction = function(f, context) {
-	return new FunctionObserver(f, context);
+	return new ReadOnlyObserver(new FunctionProvider(f, context));
 };
 
 Observer.fromStream = function(stream) {
-	return new StreamObserver(stream);
+	return new ReadOnlyObserver(new StreamProvider(stream));
 };
 
 function Observer(provider) {
@@ -53,6 +53,16 @@ Observer.prototype.patch = function(patch) {
 	}
 };
 
+function ReadOnlyObserver(provider) {
+	Observer.call(this, provider);
+}
+
+ReadOnlyObserver.prototype = Object.create(Observer.prototype);
+
+ReadOnlyObserver.prototype.patch = function() {
+	// Read-only
+};
+
 function PropertyProvider(key, object) {
 	this.key = key;
 	this.object = object;
@@ -66,16 +76,6 @@ PropertyProvider.prototype.set = function(x) {
 	this.object[this.key] = x;
 };
 
-function FunctionObserver(f, context) {
-	Observer.call(this, new FunctionProvider(f, context));
-}
-
-FunctionObserver.prototype = Object.create(Observer.prototype);
-
-FunctionObserver.prototype.patch = function() {
-	// Read-only
-};
-
 function FunctionProvider(f, context) {
 	this.f = f;
 	this.context = context;
@@ -85,17 +85,9 @@ FunctionProvider.prototype.get = function() {
 	return this.f.call(this.context);
 };
 
-function StreamObserver(stream) {
-	Observer.call(this, new StreamProvider(stream));
-}
-
-StreamObserver.prototype = Object.create(Observer.prototype);
-
-StreamObserver.prototype.patch = function() {
-	// Read-only
-};
-
 function StreamProvider(stream) {
+	// TODO: Provide a hasChanged flag so observer can know
+	// when the data has actually changed
 	this.data = void 0;
 	stream.reduce(function(self, data) {
 		self.data = data;

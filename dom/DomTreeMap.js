@@ -36,7 +36,7 @@ DomTreeMap.prototype = {
 
 	add: function(path, node) {
 		var t = findParent(this._tree, path);
-		if (t) {
+		if (t !== void 0) {
 			var key = paths.basename(path);
 			if (t.isList) {
 				t.list.splice(parseInt(key, 10), 0, build(node));
@@ -48,7 +48,7 @@ DomTreeMap.prototype = {
 
 	replace: function(path, node) {
 		var t = findParent(this._tree, path);
-		if (t) {
+		if (t !== void 0) {
 			var key = paths.basename(path);
 			if (t.isList) {
 				t.list[key] = build(node);

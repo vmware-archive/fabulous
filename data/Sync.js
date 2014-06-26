@@ -60,8 +60,9 @@ Sync.prototype = {
 	},
 
 	_fireChange: function() {
-		if(typeof this.onChange === 'function') {
-			this.onChange.call(void 0, this.data);
+		var onChange = this.onChange;
+		if(typeof onChange === 'function') {
+			onChange(this.data);
 		}
 	},
 

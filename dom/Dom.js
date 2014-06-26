@@ -29,14 +29,21 @@ function Dom(node, events) {
 		return self._generateNode(path);
 	});
 
-	var sr = this.node.shadowRoot;
-	if(sr) {
-		sr.innerHTML = template.fromString(sr.innerHTML);
-		this._shadowTreeMap = new DomTreeMap(sr);
+	this._shadowTreeMap = void 0;
+	this._shadowBuilder = void 0;
+
+	var shadow = this.node.shadowRoot;
+	if(shadow) {
+		shadow.innerHTML = template.fromString(shadow.innerHTML);
+		this._shadowTreeMap = new DomTreeMap(shadow);
 		this._shadowBuilder = new DomBuilder(this._shadowTreeMap, function(path) {
 			return self._generateNode(path);
 		});
 	}
+
+	this._runPatch = function() {
+		self._patch();
+	};
 
 	this._patches = [];
 
@@ -44,20 +51,21 @@ function Dom(node, events) {
 }
 
 Dom.prototype = {
-	diff: function(shadow) {
+	diff: function(data) {
 		if(!this._hasChanged) {
 			return;
 		}
 		this._hasChanged = false;
-		var d = diff(this._domTreeMap, shadow);
+
+		var d = diff(this._domTreeMap, data);
 		if(this._shadowTreeMap) {
-			var ds = diff(this._shadowTreeMap, shadow);
-			d = d ? d.concat(ds) : ds;
+			d = diff(this._shadowTreeMap, data, d);
 		}
 
 		if(d && d.length > 0) {
 			this._enqueuePatch(d);
 		}
+
 		return  d;
 	},
 
@@ -67,18 +75,19 @@ Dom.prototype = {
 
 	_enqueuePatch: function(patch) {
 		if(this._patches.length === 0) {
-			var self = this;
-			requestAnimationFrame(function() {
-				while(self._patches.length > 0) {
-					var p = self._patches.shift();
-					self._builder.patch(p);
-					if(self._shadowBuilder !== void 0) {
-						self._shadowBuilder.patch(p);
-					}
-				}
-			});
+			requestAnimationFrame(this._runPatch);
 		}
 		this._patches.push(patch);
+	},
+
+	_patch: function() {
+		while(this._patches.length > 0) {
+			var p = this._patches.shift();
+			this._builder.patch(p);
+			if(this._shadowBuilder !== void 0) {
+				this._shadowBuilder.patch(p);
+			}
+		}
 	},
 
 	_initEvents: function(events) {
