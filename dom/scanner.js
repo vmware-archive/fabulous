@@ -72,8 +72,7 @@ function initModel(name, node, state) {
 
 	// FIXME: Externalize this
 	context.scheduler.add(function () {
-		sync.sync();
-		return 20;
+		return sync.sync();
 	});
 
 	return state;

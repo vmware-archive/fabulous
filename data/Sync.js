@@ -1,14 +1,17 @@
 var jiff = require('jiff');
 var most = require('most');
 
+var defaultPeriod = 25;
+
 module.exports = Sync;
 
-function Sync(clients, data) {
+function Sync(clients, period) {
 	this.clients = clients;
 	this._updateClientWindow();
 
 	this._start = 0;
-	this.data = data == null ? null : jiff.clone(data);
+	this._period = period || defaultPeriod;
+	this.data = null;
 
 	var self = this;
 	this.changes = most(function(emit) {
@@ -37,8 +40,10 @@ Sync.prototype = {
 			return;
 		}
 
-		this._start = nextIndex(this._start, this.clients.length);
+		this._start = (this._start + 1) % this.clients.length;
 		this._syncClientIndex(client, this._start);
+
+		return this._period;
 	},
 
 	_syncClientIndex: function(client, start) {
@@ -68,7 +73,3 @@ Sync.prototype = {
 
 	onChange: void 0 /* function */
 };
-
-function nextIndex(i, len) {
-	return (i + 1) % len;
-}

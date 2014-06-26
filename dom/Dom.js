@@ -62,7 +62,7 @@ Dom.prototype = {
 			d = diff(this._shadowTreeMap, data, d);
 		}
 
-		if(d && d.length > 0) {
+		if(d !== void 0 && d.length > 0) {
 			this._enqueuePatch(d);
 		}
 
