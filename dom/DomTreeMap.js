@@ -8,164 +8,163 @@
  * @author John Hann
  */
 
-(function(define) { 'use strict';
-define(function(require) {
+var paths = require('../lib/path');
+var domPointer = require('../lib/domPointer');
+var fn = require('../lib/fn');
 
-	var paths = require('../lib/path');
-	var domPointer = require('../lib/domPointer');
+module.exports = DomTreeMap;
 
-	function DomTreeMap(node) {
-		this._root = node;
-		this.rebuild();
-	}
+function DomTreeMap(node) {
+	this._root = node;
+	this.rebuild();
+}
 
-	DomTreeMap.prototype = {
-		rebuild: function() {
-			this._tree = build(this._root);
-		},
+function removeNode (node, forest) {
+	forest.some(function (tree, i) {
+		if (tree.node === node) {
+			forest.splice(i, 1);
+			return true;
+		}
+	});
+	return forest;
+}
 
-		add: function(path, node) {
-			var t = findParent(this._tree, path);
-			if (t) {
-				var key = paths.basename(path);
-				if (t.isList) {
-					t.list.splice(parseInt(key, 10), 0, build(node));
-				} else {
-					t.hash[key] = append(build(node), t.hash[key]);
-				}
-			}
-		},
+DomTreeMap.prototype = {
+	rebuild: function() {
+		this._tree = build(this._root);
+	},
 
-		replace: function(path, node) {
-			var t = findParent(this._tree, path);
-			if (t) {
-				var key = paths.basename(path);
-				if (t.isList) {
-					t.list[key] = build(node);
-				} else {
-					var forest = t.hash[key];
-					forest.some(function(tree, i) {
-						if(tree.node === node) {
-							forest.splice(i, 1);
-							return true;
-						}
-					});
-					t.hash[key] = append(build(node), forest);
-				}
-			}
-		},
-
-		remove: function(node) {
-			var t = findParent(this._tree, domPointer(this._root, node));
-			if (t) {
-				var key = paths.basename(domPointer(this._root, node));
-				if (t.isList) {
-					t.list.splice(parseInt(key, 10), 1);
-				} else {
-					var forest = t.hash[key];
-					forest.some(function(tree, i) {
-						if(tree.node === node) {
-							forest.splice(i, 1);
-							return true;
-						}
-					});
-				}
-			}
-		},
-
-		findNode: function(path) {
-			var t = findParent(this._tree, path);
+	add: function(path, node) {
+		var t = findParent(this._tree, path);
+		if (t) {
 			var key = paths.basename(path);
-			if(key) {
-				t = t && getSubtree(t, key);
-			}
-			return t && t.node;
-		},
-
-		findNodes: function(path) {
-			var t = findParent(this._tree, path);
-			var key = paths.basename(path);
-			if(key) {
-				t = t && getSubtree(t, key);
-			}
-
-			if(t === void 0) {
-				return [];
-			}
-
-			return Array.isArray(t) ? t.map(function(t) {
-				return t.node;
-			}) : [t.node];
-		}
-	};
-
-	return DomTreeMap;
-
-	function findParent(tree, path) {
-		var parts = paths.split(paths.dirname(path));
-		return parts.reduce(function(tree, part) {
-			return (tree && part) ? getSubtree(tree, part) : tree;
-		}, tree);
-	}
-
-	function getSubtree(tree, key) {
-		return tree && tree.isList ? get(tree.list, key) : get(tree.hash, key);
-	}
-
-	function get(obj, key) {
-		return obj === void 0 ? void 0 : obj[key];
-	}
-
-	function build(node) {
-		return appendChildren({ node: node, hash: void 0, list: void 0, isList: false }, node);
-	}
-
-	function appendChildren(tree, node) {
-		if(domPointer.isListNode(node)) {
-			tree.isList = true;
-			return appendListChildren(tree, node.children);
-		}
-
-		return appendHashChildren(tree, node.children);
-	}
-
-	function appendListChildren(tree, children) {
-		var list = tree.list === void 0
-			? (tree.list = []) : tree.list;
-
-		for(var i=0; i<children.length; ++i) {
-			list.push(build(children[i]));
-		}
-		return tree;
-	}
-
-	function appendHashChildren(tree, children) {
-		var hash = tree.hash === void 0
-			? (tree.hash = Object.create(null)) : tree.hash;
-
-		var i, child, key;
-		for(i=0; i<children.length; ++i) {
-			child = children[i];
-			if(child.hasAttribute('data-path')) {
-				key = child.getAttribute('data-path');
-				hash[key] = append(build(child), hash[key]);
-			} else if(child.hasAttribute('name')) {
-				key = child.getAttribute('name');
-				hash[key] = append(build(child), hash[key]);
+			if (t.isList) {
+				t.list.splice(parseInt(key, 10), 0, build(node));
 			} else {
-				appendChildren(tree, child);
+				t.hash[key] = append(build(node), t.hash[key]);
 			}
 		}
-		return tree;
-	}
+	},
 
-	function append(x, list) {
-		if(list === void 0) {
-			return [x];
+	replace: function(path, node) {
+		var t = findParent(this._tree, path);
+		if (t) {
+			var key = paths.basename(path);
+			if (t.isList) {
+				t.list[key] = build(node);
+			} else {
+				var forest = removeNode(node, t.hash[key]);
+				t.hash[key] = append(build(node), forest);
+			}
 		}
-		list.push(x);
-		return list;
+	},
+
+	remove: function(node) {
+		var t = findParent(this._tree, domPointer(this._root, node));
+		if (t) {
+			var key = paths.basename(domPointer(this._root, node));
+			if (t.isList) {
+				t.list.splice(parseInt(key, 10), 1);
+			} else {
+				removeNode(node, t.hash[key]);
+			}
+		}
+	},
+
+	findNode: function(path) {
+		var t = findParent(this._tree, path);
+		var key = paths.basename(path);
+		if(key) {
+			t = t && getSubtree(t, key);
+		}
+		return t && t.node;
+	},
+
+	findNodes: function(path) {
+		var t = findParent(this._tree, path);
+		var key = paths.basename(path);
+		if(key) {
+			t = t && getSubtree(t, key);
+		}
+
+		if(t === void 0) {
+			return [];
+		}
+
+		return Array.isArray(t) ? fn.map(function(t) {
+			return t.node;
+		}, t) : [t.node];
+	}
+};
+
+function findParent(tree, path) {
+	var parts = paths.split(paths.dirname(path));
+	return fn.reduce(function(tree, part) {
+		return (tree && part) ? getSubtree(tree, part) : tree;
+	}, tree, parts);
+}
+
+function getSubtree(tree, key) {
+	return tree && tree.isList ? getArray(key, tree.list) : getObject(key, tree.hash);
+}
+
+function getObject(k, o) {
+	return o === void 0 ? void 0 : o[k];
+}
+
+function getArray(i, a) {
+	return a === void 0 ? void 0 : a[i];
+}
+
+function build(node) {
+	return appendChildren({ node: node, hash: void 0, list: void 0, isList: false }, node);
+}
+
+function appendChildren(tree, node) {
+	if(domPointer.isListNode(node)) {
+		tree.isList = true;
+		return appendListChildren(tree, node.children);
 	}
 
-});
-}(typeof define === 'function' && define.amd ? define : function(factory) { module.exports = factory(require); }));
+	return appendHashChildren(tree, node.children);
+}
+
+function appendListChildren(tree, children) {
+	var list = tree.list === void 0
+		? (tree.list = []) : tree.list;
+
+	fn.reduce(function(list, child) {
+		list.push(build(child));
+		return list;
+	}, list, children);
+
+	return tree;
+}
+
+function appendHashChildren(tree, children) {
+	var hash = tree.hash === void 0
+		? (tree.hash = Object.create(null)) : tree.hash;
+
+	var i, child, key;
+	for(i=0; i<children.length; ++i) {
+		child = children[i];
+		if(child.hasAttribute('data-path')) {
+			key = child.getAttribute('data-path');
+			hash[key] = append(build(child), hash[key]);
+		} else if(child.hasAttribute('name')) {
+			key = child.getAttribute('name');
+			hash[key] = append(build(child), hash[key]);
+		} else {
+			appendChildren(tree, child);
+		}
+	}
+	return tree;
+}
+
+function append(x, list) {
+	if(list === void 0) {
+		return [x];
+	}
+	list.push(x);
+	return list;
+}

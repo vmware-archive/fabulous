@@ -1,7 +1,7 @@
 var jiff = require('jiff');
 var when = require('when');
-var flip = require('../lib/fn').flip;
-var applyPatch = flip(jiff.patch);
+var fn = require('../lib.fn');
+var applyPatch = fn.flip(jiff.patch);
 
 module.exports = PatchHandler;
 
@@ -17,9 +17,9 @@ PatchHandler.prototype.initConnection = function(connection) {
 
 PatchHandler.prototype.addPatches = function(connection, data, patches) {
 	var self = this;
-	return patches.reduce(function(data, patch) {
+	return fn.reduce(function(data, patch) {
 		return self._addPatch(connection, data, patch);
-	}, data);
+	}, data, patches);
 };
 
 PatchHandler.prototype.receivePatches = function(connection, data, patches) {
@@ -28,7 +28,7 @@ PatchHandler.prototype.receivePatches = function(connection, data, patches) {
 		return patches;
 	}
 
-	return patches.reduce(applyPatch, data);
+	return fn.reduce(applyPatch, data, patches);
 };
 
 PatchHandler.prototype._addPatch = function(connection, data, patch) {

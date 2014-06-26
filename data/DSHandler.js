@@ -1,4 +1,5 @@
 var jiff = require('jiff');
+var fn = require('../lib/fn');
 
 module.exports = DSHandler;
 
@@ -31,9 +32,9 @@ DSHandler.prototype.finishConnection = function(connection) {
 
 DSHandler.prototype.addPatches = function(connection, data, patches) {
 	var self = this;
-	return patches.reduce(function(data, patch) {
+	return fn.reduce(function(data, patch) {
 		return self._addPatch(connection, data, patch);
-	}, data);
+	}, data, patches);
 };
 
 DSHandler.prototype.receivePatches = function(connection, data, patches) {
@@ -53,7 +54,7 @@ DSHandler.prototype.receivePatches = function(connection, data, patches) {
 		}]);
 	} else {
 		var self = this;
-		updated = patches.reduce(function(data, change) {
+		updated = fn.reduce(function(data, change) {
 //			console.log(this._remoteVersion, change);
 			// Only apply patches for versions larger than the current
 			var updated;
@@ -67,7 +68,7 @@ DSHandler.prototype.receivePatches = function(connection, data, patches) {
 			}
 
 			return updated
-		}, data);
+		}, data, patches);
 
 //		console.log('after patch from remote', this._remoteVersion, this.data);
 	}
@@ -121,9 +122,9 @@ DSHandler.prototype._pruneChanges = function() {
 	// than the version the server just told us it has.
 	var remoteVersion = this._remoteVersion;
 //	console.log('before pruning', this._patchBuffer);
-	this._patchBuffer = this._patchBuffer.filter(function (change) {
+	this._patchBuffer = fn.filter(function (change) {
 //		console.log(change.remoteVersion > remoteVersion ? '-->' : '<--', remoteVersion, change.remoteVersion, change);
 		return change.remoteVersion > remoteVersion;
-	});
+	}, this._patchBuffer);
 //	console.log('after pruning', this._patchBuffer);
 };

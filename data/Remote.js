@@ -18,7 +18,7 @@ Remote.prototype.diff = function(data) {
 };
 
 Remote.prototype.patch = function(patch) {
-	if(!patch) {
+	if(!patch || patch.length === 0) {
 		return;
 	}
 	this.data = this._handler.addPatches(this._connection, this.data, [patch]);

@@ -1,9 +1,13 @@
 var fn = require('../lib/fn');
 var Dom = require('../dom/dom');
-var Property = require('../data/Property');
 var Sync = require('../data/Sync');
 var path = require('../lib/path');
 var events = require('./events');
+var Observer = require('../data/Observer');
+
+var Stream = require('most/Stream');
+
+var jsonPointer = require('jiff/lib/jsonPointer');
 
 var eventAttrs = fn.reduce(function(eventAttrs, e) {
 	eventAttrs['data-on' + e] = e;
@@ -61,17 +65,35 @@ function addEvents(node, state) {
 
 function initModel(name, node, state) {
 	var context = state.context;
-	var model = find(name, context);
 
-	var property = isSync(model) ? model : new Property(context, name);
-	var sync = context['_' + name + 'Sync'] = new Sync([new Dom(node), property]);
+	var observer = createObserver(jsonPointer.find(context, name));
 
+	var sync = context['_' + name + 'Sync'] = new Sync([new Dom(node), observer]);
+
+	// FIXME: Externalize this
 	context.scheduler.add(function () {
 		sync.sync();
 		return 20;
 	});
 
 	return state;
+}
+
+function createObserver (p) {
+	var model = p.target[p.key];
+	var observer;
+
+	if (isObserver(model)) {
+		observer = model;
+	} else if (typeof model === 'function') {
+		observer = Observer.fromFunction(model, p.target);
+	} else if (model instanceof Stream) {
+		observer = Observer.fromStream(model);
+	} else {
+		observer = Observer.fromProperty(p.key, p.target);
+	}
+
+	return observer;
 }
 
 function scanView(name, node, state) {
@@ -94,13 +116,7 @@ function scanChildren(node, state) {
 	}, state, node.children);
 }
 
-function find(p, o) {
-	return path.split(p).reduce(function(o, k) {
-		return o == null ? o : o[k];
-	}, o);
-}
-
-function isSync(x) {
+function isObserver(x) {
 	return x != null && typeof x.diff === 'function' && typeof x.patch === 'function';
 }
 
@@ -110,4 +126,3 @@ function pushState(s) {
 		events: { value: Object.create(null) }
 	});
 }
-
