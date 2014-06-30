@@ -1,7 +1,7 @@
 var jiff = require('jiff');
 var most = require('most');
 
-var defaultPeriod = 25;
+var defaultPeriod = 20;
 
 module.exports = Sync;
 

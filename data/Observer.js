@@ -89,10 +89,10 @@ function StreamProvider(stream) {
 	// TODO: Provide a hasChanged flag so observer can know
 	// when the data has actually changed
 	this.data = void 0;
-	stream.reduce(function(self, data) {
+	var self = this;
+	stream.forEach(function(data) {
 		self.data = data;
-		return self;
-	}, this);
+	});
 }
 
 StreamProvider.prototype.get = function() {

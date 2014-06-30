@@ -113,8 +113,8 @@ function formToObject (formOrEvent, predicate) {
 		predicate = alwaysInclude;
 	}
 
-	obj = Object.create(null);
-	seen = Object.create(null); // finds checkbox groups
+	obj = {};
+	seen = {}; // finds checkbox groups
 	els = form.elements;
 	i = 0;
 

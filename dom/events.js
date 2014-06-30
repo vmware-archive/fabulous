@@ -1,6 +1,5 @@
-var jsonPointer = require('jiff/lib/jsonPointer');
-
 var fn = require('../lib/fn');
+var object = require('../lib/object');
 var domPointer = require('../lib/domPointer');
 var form = require('../dom/form');
 
@@ -36,8 +35,7 @@ function findNode(events, root, e) {
 }
 
 function handler(context, root, node, value, e) {
-	var path = value.replace(/\./g, '/');
-	var p = jsonPointer.find(context, path);
+	var p = object.find(value.replace('.', '/'), context);
 
 	if (!(p && p.target && typeof p.target[p.key] === 'function')) {
 		// TODO: This logs a nice, *clickable* node to the console.
@@ -55,7 +53,7 @@ function handler(context, root, node, value, e) {
 		args.unshift(form.getValues(node));
 	} else {
 		var domPath = domPointer(root, node);
-		var data = jsonPointer.find(context, domPath);
+		var data = object.find(domPath, context);
 
 		if (data && data.target && data.key in data.target) {
 			args.unshift(data.target[data.key]);

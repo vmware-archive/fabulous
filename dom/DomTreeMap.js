@@ -15,7 +15,7 @@ var fn = require('../lib/fn');
 module.exports = DomTreeMap;
 
 function DomTreeMap(node) {
-	this._root = node;
+	this.root = node;
 	this.rebuild();
 }
 
@@ -31,7 +31,7 @@ function removeNode (node, forest) {
 
 DomTreeMap.prototype = {
 	rebuild: function() {
-		this._tree = build(this._root);
+		this._tree = build(this.root);
 	},
 
 	add: function(path, node) {
@@ -60,9 +60,9 @@ DomTreeMap.prototype = {
 	},
 
 	remove: function(node) {
-		var t = findParent(this._tree, domPointer(this._root, node));
+		var t = findParent(this._tree, domPointer(this.root, node));
 		if (t) {
-			var key = paths.basename(domPointer(this._root, node));
+			var key = paths.basename(domPointer(this.root, node));
 			if (t.isList) {
 				t.list.splice(parseInt(key, 10), 1);
 			} else {
@@ -143,7 +143,7 @@ function appendListChildren(tree, children) {
 
 function appendHashChildren(tree, children) {
 	var hash = tree.hash === void 0
-		? (tree.hash = Object.create(null)) : tree.hash;
+		? (tree.hash = {}) : tree.hash;
 
 	var i, child, key;
 	for(i=0; i<children.length; ++i) {

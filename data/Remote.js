@@ -22,7 +22,6 @@ Remote.prototype.patch = function(patch) {
 		return;
 	}
 	this.data = this._handler.addPatches(this._connection, this.data, [patch]);
-	this._fireChange(this.data);
 };
 
 Remote.prototype.connect = function(endpoint) {
@@ -70,11 +69,4 @@ Remote.prototype._patchFromRemote = function(patches) {
 	}
 
 	this.data = this._handler.receivePatches(this._connection, this.data, patches);
-	this._fireChange(this.data);
-};
-
-Remote.prototype._fireChange = function(x) {
-	if(typeof this.onChange === 'function') {
-		this.onChange.call(void 0, x);
-	}
 };

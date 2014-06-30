@@ -46,8 +46,7 @@ function Dom(node, events) {
 	};
 
 	this._patches = [];
-
-	this._initEvents(events);
+	this._events = this._initEvents(events);
 }
 
 Dom.prototype = {
@@ -81,30 +80,30 @@ Dom.prototype = {
 	},
 
 	_patch: function() {
-		while(this._patches.length > 0) {
-			var p = this._patches.shift();
+		var patches = this._patches;
+		this._patches = [];
+
+		var hasShadow = this._shadowBuilder !== void 0;
+
+		for(var i=0, l=patches.length, p; i<l; ++i) {
+			p = patches[i];
 			this._builder.patch(p);
-			if(this._shadowBuilder !== void 0) {
-				this._shadowBuilder.patch(p);
+			if(hasShadow) {
+				this._shadowBuilder.patch(p)
 			}
 		}
 	},
 
 	_initEvents: function(events) {
-		this._events = normalizeEvents(events);
+		var ev = normalizeEvents(events);
 
-		var observe;
-		if(this._observe) {
-			observe = this._observe;
-			eachNodeEventPair(function(node, event) {
-				node.removeEventListener(event, observe);
-			}, this._events, this._doc);
-		}
+		this._observe = this._createObserver();
+		this.node = fn.reduce(function(self, event) {
+			self.node.addEventListener(event, self._observe);
+			return self;
+		}, this, ev);
 
-		observe = this._observe = this._createObserver();
-		eachNodeEventPair(function(node, event) {
-			node.addEventListener(event, observe, false);
-		}, this._events, this._domTreeMap);
+		return ev;
 	},
 
 	_createObserver: function() {
@@ -113,6 +112,8 @@ Dom.prototype = {
 			self._hasChanged = true;
 		};
 	},
+
+	_observe: function() {},
 
 	_generateNode: function(path) {
 		var key = paths.dirname(path);
@@ -124,24 +125,7 @@ Dom.prototype = {
 };
 
 function normalizeEvents(events) {
-	if (!events) {
-		events = { '/': 'change' };
-	} else if (typeof events === 'string') {
-		events = { '/': events };
-	}
-
-	return events;
-}
-
-function eachNodeEventPair(f, events, reg) {
-	Object.keys(events).forEach(function(path) {
-		var event = events[path];
-		event = event.split(/\s*,\s*/);
-		event.forEach(function(event) {
-			var node = reg.findNode(path);
-			node && f(node, event);
-		});
-	});
+	return events ? events.split(',') : ['change'];
 }
 
 function findListTemplates(root) {

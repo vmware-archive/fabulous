@@ -55,16 +55,13 @@ DSHandler.prototype.receivePatches = function(connection, data, patches) {
 	} else {
 		var self = this;
 		updated = fn.reduce(function(data, change) {
-//			console.log(this._remoteVersion, change);
 			// Only apply patches for versions larger than the current
 			var updated;
 			if(change.localVersion > self._remoteVersion) {
-//				console.log('+++', this._remoteVersion, change);
 				updated = jiff.patch(change.patch, data);
 				self._remoteVersion = change.localVersion;
 			} else {
 				updated = data;
-//				console.log('---', this._remoteVersion, change);
 			}
 
 			return updated
@@ -101,7 +98,7 @@ DSHandler.prototype._sendPatches = function(connection) {
 	var self = this;
 	this._timer = setTimeout(function() {
 		self._doSendPatches(connection);
-	}, 1000);
+	}, 2000);
 };
 
 DSHandler.prototype._doSendPatches = function(connection) {

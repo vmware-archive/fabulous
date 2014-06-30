@@ -1,4 +1,5 @@
 var fn = require('../lib/fn');
+var object = require('../lib/object');
 var Dom = require('../dom/dom');
 var Sync = require('../data/Sync');
 var path = require('../lib/path');
@@ -7,20 +8,22 @@ var Observer = require('../data/Observer');
 
 var Stream = require('most/Stream');
 
-var jsonPointer = require('jiff/lib/jsonPointer');
-
 var eventAttrs = fn.reduce(function(eventAttrs, e) {
-	eventAttrs['data-on' + e] = e;
+	eventAttrs['on'+e] = eventAttrs['data-on'+e] = e;
 	return eventAttrs;
-}, Object.create(null), ['change', 'submit', 'click', 'dblclick', 'keypress', 'focus', 'blur']);
+}, {}, ['change', 'click', 'dblclick', 'keypress', 'submit', 'focus', 'blur']);
+
+var directEventAttrs = {
+	'blur': 1, 'focus': 1, 'submit': 1
+};
 
 module.exports = scanner;
 
 // TODO: scanner should return something sensible,
 // possibly a new destroy function that will clean up
 // all the things it did.
-function scanner(node, state) {
-	return scanView(void 0, node, state);
+function scanner(node, context) {
+	return scanView(void 0, node, { context: context, events: {} });
 }
 
 function scan(node, state) {
@@ -57,18 +60,32 @@ function addEvents(node, state) {
 	var dispatcher = events.dispatch(finder, handler);
 	state.eventDispatcher = dispatcher;
 
-	return Object.keys(state.events).reduce(function(node, event) {
+	return fn.reduce(function(node, event) {
 		node.addEventListener(event, dispatcher, false);
 		return node;
-	}, node);
+	}, node, Object.keys(state.events));
 }
 
 function initModel(name, node, state) {
 	var context = state.context;
 
-	var observer = createObserver(jsonPointer.find(context, name));
+	var syncEvents = node.getAttribute('data-sync');
 
-	var sync = context['_' + name + 'Sync'] = new Sync([new Dom(node), observer]);
+	var key = '_' + name + 'Sync';
+	var sync = context[key];
+	if(sync === void 0) {
+		sync = context[key] = new Sync([]);
+	}
+
+	sync.add(new Dom(node, syncEvents));
+
+	key = '_' + name + 'Observer';
+	var observer = context[key];
+	if(observer === void 0) {
+		observer = context[key] =
+			createObserver(object.find(name.replace('.', '/'), context));
+		sync.add(observer);
+	}
 
 	// FIXME: Externalize this
 	context.scheduler.add(function () {
@@ -122,6 +139,6 @@ function isObserver(x) {
 function pushState(s) {
 	return Object.create(s, {
 		context: { value: Object.create(s.context) },
-		events: { value: Object.create(null) }
+		events: { value: {} }
 	});
 }

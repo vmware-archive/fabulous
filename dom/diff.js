@@ -11,10 +11,26 @@
 var dom = require('../lib/dom');
 var isListNode = require('../lib/domPointer').isListNode;
 var path = require('../lib/path');
+var fn = require('../lib/fn');
 
-module.exports = function diffDataAndDom(reg, data, patch) {
-	return diff(reg, Object.create(null), patch||[], '', data, reg.findNode(''));
-};
+module.exports = diffDataAndDom;
+
+function diffDataAndDom(reg, data, patch) {
+	return diffNode(reg, data, '', reg.findNode(''), patch||[]);
+}
+
+diffDataAndDom.diffPath = diffPath;
+
+function diffPath(reg, data, path, patch) {
+	var nodes = reg.findNodes(path);
+	return fn.reduce(function(patch, node) {
+		return diffNode(reg, data, path, node, patch);
+	}, patch||[], nodes);
+}
+
+function diffNode(reg, data, path, node, patch) {
+	return diff(reg, {}, patch, path, data, node)
+}
 
 function diff(reg, seen, patch, basePath, value, node) {
 	var nodeValue;
@@ -46,7 +62,7 @@ function bfs(reg, seen, patch, basePath, data) {
 		return diffArray(reg, seen, patch, basePath, data);
 	}
 
-	return Object.keys(data).reduce(function(patch, key) {
+	return fn.reduce(function(patch, key) {
 
 		var local = path.join(basePath, key);
 		var nodes = reg.findNodes(local);
@@ -65,17 +81,17 @@ function bfs(reg, seen, patch, basePath, data) {
 			return patch;
 		}
 
-		return nodes.reduce(function(patch, node) {
+		return fn.reduce(function(patch, node) {
 			return diff(reg, seen, patch, local, data[key], node);
-		}, patch);
+		}, patch, nodes);
 
-	}, patch);
+	}, patch, Object.keys(data));
 }
 
 function diffArray(reg, seen, patch, basePath, array) {
 	var parents = reg.findNodes(basePath);
 
-	return parents.reduce(function(patch, parent) {
+	return fn.reduce(function(patch, parent) {
 		var list = findListChild(parent);
 		if(!list) {
 			// TODO: throw?
@@ -85,7 +101,7 @@ function diffArray(reg, seen, patch, basePath, array) {
 		return array.reduce(function(patch, value, i) {
 			return diff(reg, seen, patch, path.join(basePath, ''+i), value, list.children[i]);
 		}, patch);
-	}, patch);
+	}, patch, parents);
 }
 
 function isContainer(x) {

@@ -9,7 +9,8 @@ module.exports = curry(function nav(builder, context) {
 	context.navigation = most(function (emit) {
 		var current = location.hash.slice(1);
 
-		var state = navigate(current, '', []);
+		var state = current ? navigate(current, '', [])
+					: transition(push, pop, [''], [], []);
 
 		window.addEventListener('hashchange', handleNavChange);
 
@@ -24,14 +25,15 @@ module.exports = curry(function nav(builder, context) {
 		}
 
 		function push (state, path) {
-			state = state.concat(path);
-			emit({ action: 1, stack: state, path: state.join('/') });
+			state = path ? state.concat(path) : state;
+			emit({ action: 1, stack: state, value: path });
 			return state;
 		}
 
-		function pop (state) {
-			emit({ action: -1, stack: state, path: state.join('/') });
-			return state.slice(0, -1);
+		function pop (state, path) {
+			state = state.slice(0, -1);
+			emit({ action: -1, stack: state, value: path });
+			return state;
 		}
 	});
 
