@@ -20,6 +20,14 @@ function Observer(provider) {
 	this.provider = provider;
 }
 
+Observer.prototype.get = function() {
+	return this.provider.get();
+};
+
+Observer.prototype.set = function(data) {
+	return this.provider.set(data);
+};
+
 Observer.prototype.diff = function(data) {
 	var x = this.provider.get();
 
@@ -60,6 +68,10 @@ function ReadOnlyObserver(provider) {
 ReadOnlyObserver.prototype = Object.create(Observer.prototype);
 
 ReadOnlyObserver.prototype.patch = function() {
+	// Read-only
+};
+
+ReadOnlyObserver.prototype.set = function() {
 	// Read-only
 };
 

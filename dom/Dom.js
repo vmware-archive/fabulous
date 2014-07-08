@@ -50,6 +50,24 @@ function Dom(node, events) {
 }
 
 Dom.prototype = {
+	get: function() {
+		throw new Error('Dom cannot be a data source');
+	},
+
+	set: function(data) {
+		if(data === void 0) {
+			return;
+		}
+
+		var result = this._builder.build(data);
+
+		if(this._shadowBuilder) {
+			this._shadowBuilder.build(data);
+		}
+
+		return result;
+	},
+
 	diff: function(data) {
 		if(!this._hasChanged) {
 			return;

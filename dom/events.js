@@ -53,7 +53,7 @@ function handler(context, root, node, value, e) {
 		args.unshift(form.getValues(node));
 	} else {
 		var domPath = domPointer(root, node);
-		var data = object.find(domPath, context);
+		var data = object.find(domPath.replace('.', '/'), context);
 
 		if (data && data.target && data.key in data.target) {
 			args.unshift(data.target[data.key]);

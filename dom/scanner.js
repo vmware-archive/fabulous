@@ -48,6 +48,13 @@ function collectEvents(node, state) {
 			// TODO: This needs to collect both the node and the name
 			// Since some events (blur, focus) don't bubble, we have to
 			// directly attach some handlers
+			if(!/^data-on/.test(name)) {
+				node.setAttribute('data-' + name, node.getAttribute(name));
+				node[name] = '';
+				node.removeAttribute(name);
+				name = 'data-' + name;
+			}
+
 			state.events[eventAttrs[name]] = name;
 		}
 		return state;
@@ -70,27 +77,30 @@ function initModel(name, node, state) {
 	var context = state.context;
 
 	var syncEvents = node.getAttribute('data-sync');
+	var adapters = [];
 
-	var key = '_' + name + 'Sync';
-	var sync = context[key];
-	if(sync === void 0) {
-		sync = context[key] = new Sync([]);
-	}
-
-	sync.add(new Dom(node, syncEvents));
-
-	key = '_' + name + 'Observer';
+	var key = '_' + name + 'Observer';
 	var observer = context[key];
 	if(observer === void 0) {
 		observer = context[key] =
 			createObserver(object.find(name.replace('.', '/'), context));
-		sync.add(observer);
+		adapters.push(observer);
+	}
+
+	adapters.push(new Dom(node, syncEvents));
+
+	key = '_' + name + 'Sync';
+	var sync = context[key];
+	if(sync === void 0) {
+		sync = context[key] = new Sync(adapters);
+	} else {
+		fn.map(function(adapter) {
+			return sync.add(adapter);
+		}, adapters);
 	}
 
 	// FIXME: Externalize this
-	context.scheduler.add(function () {
-		return sync.sync();
-	});
+	sync.run(context.scheduler);
 
 	return state;
 }

@@ -1,5 +1,7 @@
 var jiff = require('jiff');
-var most = require('most');
+var when = require('when');
+
+var fn = require('../lib/fn');
 
 var defaultPeriod = 20;
 
@@ -7,22 +9,27 @@ module.exports = Sync;
 
 function Sync(clients, period) {
 	this.clients = clients;
-	this._updateClientWindow();
 
+	this._clientWindow = void 0;
 	this._start = 0;
 	this._period = period || defaultPeriod;
-	this.data = null;
+	this._scheduler = void 0;
+	this.data = void 0;
 
 	var self = this;
-	this.changes = most(function(emit) {
-		self.onChange = emit;
-	});
+	this._runSync = function() {
+		return self.sync();
+	}
 }
 
 Sync.prototype = {
 	add: function(client) {
 		this.clients.push(client);
 		this._updateClientWindow();
+
+		if(this.data !== void 0) {
+			client.set(this.data);
+		}
 	},
 
 	remove: function(client) {
@@ -34,16 +41,44 @@ Sync.prototype = {
 		this._clientWindow = this.clients.concat(this.clients);
 	},
 
+	_init: function() {
+		return getData(0, this.clients);
+	},
+
+	run: function(scheduler) {
+		this._scheduler = scheduler;
+		var self = this;
+		this._updateClientWindow();
+
+		return when(this._init())
+			.fold(initClients, this.clients)
+			.then(function(data) {
+				self.data = data == null ? null : jiff.clone(data);
+				return self._fireChange();
+			})
+			.then(function() {
+				return scheduler.add(self._runSync);
+			});
+	},
+
+	stop: function() {
+		if(this._scheduler !== void 0) {
+			this._scheduler.cancel(this._runSync);
+			this._scheduler = void 0;
+		}
+	},
+
 	sync: function() {
 		var client = this.clients[this._start];
 		if(!client) {
 			return;
 		}
 
-		this._start = (this._start + 1) % this.clients.length;
+		var len = this.clients.length;
+		this._start = (this._start + 1) % len;
 		this._syncClientIndex(client, this._start);
 
-		return this._period;
+		return this._period / len;
 	},
 
 	_syncClientIndex: function(client, start) {
@@ -73,3 +108,27 @@ Sync.prototype = {
 
 	onChange: void 0 /* function */
 };
+
+function getData(i, clients) {
+	var client = clients[i];
+	return when(client.get(), function(data) {
+		return { data: data, client: client };
+	}).catch(function(e) {
+		if(i < clients.length-1) {
+			return getData(i+1, clients);
+		}
+
+		throw e;
+	});
+}
+
+function initClients(clients, source) {
+	var c = fn.filter(function(c) {
+		return c !== source.client;
+	}, clients);
+
+	return fn.reduce(function(data, client) {
+		client.set(data);
+		return data;
+	}, source.data, c);
+}
