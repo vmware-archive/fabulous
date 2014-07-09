@@ -41,7 +41,7 @@ PatchClient.prototype.diff = function(data) {
 		return;
 	}
 
-	return jiff.diff(data, this.data, defaultHash);
+	return jiff.diff(data, this.data, { hash: defaultHash, context: getContext });
 };
 
 PatchClient.prototype.patch = function(patch) {
@@ -72,6 +72,7 @@ PatchClient.prototype._fetch = function() {
 };
 
 PatchClient.prototype._sendNext = function() {
+	// TODO: This delay should be configurable or externalized
 	var delay = this._patchBuffer.length === 0 ? 2000 : 500;
 
 	return when(this._patchBuffer).delay(delay)
@@ -87,4 +88,11 @@ PatchClient.prototype._send = function(msg) {
 
 function dispatchReturnPatch(to, patch) {
 	return to._handleReturnPatch(patch);
+}
+
+function getContext(i, array) {
+	return {
+		before: array.slice(Math.max(0, i-3), i),
+		after: array.slice(Math.min(array.length, i), i+3)
+	};
 }

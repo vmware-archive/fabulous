@@ -1,21 +1,17 @@
 var fn = require('../lib/fn');
 var object = require('../lib/object');
-var Dom = require('../dom/dom');
-var Sync = require('../data/Sync');
 var path = require('../lib/path');
+var Dom = require('./Dom');
 var events = require('./events');
-var Observer = require('../data/Observer');
 
-var Stream = require('most/Stream');
+var Document = require('../Document');
+var Stream = require('../lib/Stream');
+var Sync = require('../data/Sync');
 
 var eventAttrs = fn.reduce(function(eventAttrs, e) {
 	eventAttrs['on'+e] = eventAttrs['data-on'+e] = e;
 	return eventAttrs;
 }, {}, ['change', 'click', 'dblclick', 'keypress', 'submit', 'focus', 'blur']);
-
-var directEventAttrs = {
-	'blur': 1, 'focus': 1, 'submit': 1
-};
 
 module.exports = scanner;
 
@@ -79,7 +75,7 @@ function initModel(name, node, state) {
 	var syncEvents = node.getAttribute('data-sync');
 	var adapters = [];
 
-	var key = '_' + name + 'Observer';
+	var key = '_' + name + 'ProviderClient';
 	var observer = context[key];
 	if(observer === void 0) {
 		observer = context[key] =
@@ -94,9 +90,10 @@ function initModel(name, node, state) {
 	if(sync === void 0) {
 		sync = context[key] = new Sync(adapters);
 	} else {
-		fn.map(function(adapter) {
-			return sync.add(adapter);
-		}, adapters);
+		sync = fn.reduce(function(sync, adapter) {
+			sync.add(adapter);
+			return sync;
+		}, sync, adapters);
 	}
 
 	// FIXME: Externalize this
@@ -106,20 +103,20 @@ function initModel(name, node, state) {
 }
 
 function createObserver (p) {
-	var model = p.target[p.key];
-	var observer;
+	var x = p.target[p.key];
+	var doc;
 
-	if (isObserver(model)) {
-		observer = model;
-	} else if (typeof model === 'function') {
-		observer = Observer.fromFunction(model, p.target);
-	} else if (model instanceof Stream) {
-		observer = Observer.fromStream(model);
+	if (isDocument(x)) {
+		doc = x;
+	} else if (isObservable(x)) {
+		doc = Document.fromObservable(x);
+	} else if (typeof x === 'function') {
+		doc = Document.fromFunction(x, p.target);
 	} else {
-		observer = Observer.fromProperty(p.key, p.target);
+		doc = Document.fromProperty(p.key, p.target);
 	}
 
-	return observer;
+	return doc;
 }
 
 function scanView(name, node, state) {
@@ -142,8 +139,12 @@ function scanChildren(node, state) {
 	}, state, node.children);
 }
 
-function isObserver(x) {
+function isDocument(x) {
 	return x != null && typeof x.diff === 'function' && typeof x.patch === 'function';
+}
+
+function isObservable(x) {
+	return x instanceof Stream;
 }
 
 function pushState(s) {

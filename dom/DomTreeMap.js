@@ -9,7 +9,7 @@
  */
 
 var paths = require('../lib/path');
-var domPointer = require('../lib/domPointer');
+var domPointer = require('./domPointer');
 var fn = require('../lib/fn');
 
 module.exports = DomTreeMap;

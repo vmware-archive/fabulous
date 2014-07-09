@@ -15,15 +15,22 @@ var base = rest.wrap(mime, {
 	registry: localRegistry
 }).wrap(entity);
 
-module.exports = base;
+module.exports = decorate(base);
 
-base.get = base.wrap(defaults, { method: 'GET' });
-base.put = base.wrap(defaults, { method: 'PUT' });
-base.post = base.wrap(defaults, { method: 'POST' });
-base['delete'] = base.wrap(defaults, { method: 'DELETE' });
-base.patch = base.wrap(defaults, { method: 'PATCH' });
+function at(url, base) {
+	return decorate(base.wrap(pathPrefix, { prefix: url }));
+}
 
-base.at = function at(url) {
-	return base.wrap(pathPrefix, { prefix: url });
-};
+function decorate(client) {
+	client.get       = client.wrap(defaults, { method: 'GET' });
+	client.put       = client.wrap(defaults, { method: 'PUT' });
+	client.post      = client.wrap(defaults, { method: 'POST' });
+	client['delete'] = client.wrap(defaults, { method: 'DELETE' });
+	client.patch     = client.wrap(defaults, { method: 'PATCH' });
 
+	client.at = function(url) {
+		return at(url, client);
+	};
+
+	return client;
+}

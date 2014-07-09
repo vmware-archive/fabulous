@@ -8,8 +8,8 @@
  * @author John Hann
  */
 
-var dom = require('../lib/dom');
-var isListNode = require('../lib/domPointer').isListNode;
+var base = require('./base');
+var isListNode = require('./domPointer').isListNode;
 var path = require('../lib/path');
 var fn = require('../lib/fn');
 
@@ -41,7 +41,7 @@ function diff(reg, seen, patch, basePath, value, node) {
 		return bfs(reg, seen, patch, basePath, value);
 	}
 
-	nodeValue = dom.getValue(node);
+	nodeValue = base.getValue(node);
 	if(nodeValue != value) {
 		patch.push({
 			op: 'test',

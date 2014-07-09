@@ -1,7 +1,7 @@
 var fn = require('../lib/fn');
 var object = require('../lib/object');
-var domPointer = require('../lib/domPointer');
-var form = require('../dom/form');
+var domPointer = require('./domPointer');
+var form = require('./form');
 
 var curry = fn.curry;
 

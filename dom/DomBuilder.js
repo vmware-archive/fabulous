@@ -8,8 +8,8 @@
  * @author John Hann
  */
 
-var dom = require('../lib/dom');
-var isListNode = require('../lib/domPointer').isListNode;
+var base = require('./base');
+var isListNode = require('./domPointer').isListNode;
 var paths = require('../lib/path');
 var fn = require('../lib/fn');
 
@@ -46,7 +46,7 @@ DomBuilder.prototype._buildNodeValue = function(path, value, node) {
 		}, Object.keys(value));
 	}
 
-	return dom.setValue(node, value);
+	return base.setValue(node, value);
 };
 
 DomBuilder.prototype.replace = function(path, value) {
@@ -95,7 +95,7 @@ DomBuilder.prototype._replaceNodeValue = function(path, value, node) {
 		return this._replaceNodeValueObject(path, value, node);
 	}
 
-	return dom.setValue(node, value);
+	return base.setValue(node, value);
 };
 
 DomBuilder.prototype._addNodeValue = function(path, value, node) {
@@ -119,7 +119,7 @@ DomBuilder.prototype._addNodeValue = function(path, value, node) {
 
 	var nodes = this._map.findNodes(path);
 	return fn.map(function(node) {
-		return dom.setValue(node, value);
+		return base.setValue(node, value);
 	}, nodes);
 };
 
