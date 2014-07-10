@@ -19,16 +19,6 @@ function DomTreeMap(node) {
 	this.rebuild();
 }
 
-function removeNode (node, forest) {
-	forest.some(function (tree, i) {
-		if (tree.node === node) {
-			forest.splice(i, 1);
-			return true;
-		}
-	});
-	return forest;
-}
-
 DomTreeMap.prototype = {
 	rebuild: function() {
 		this._tree = build(this.root);
@@ -168,3 +158,14 @@ function append(x, list) {
 	list.push(x);
 	return list;
 }
+
+function removeNode (node, forest) {
+	forest.some(function (tree, i) {
+		if (tree.node === node) {
+			forest.splice(i, 1);
+			return true;
+		}
+	});
+	return forest;
+}
+

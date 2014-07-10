@@ -1,10 +1,9 @@
 var Stream = require('./lib/Stream');
 
-exports.of = Stream.of;
-
-exports.from = Stream.from;
-
-exports.fromPromise = Stream.fromPromise;
+Object.keys(Stream).reduce(function(exports, key) {
+	exports[key] = Stream[key];
+	return exports;
+}, exports);
 
 exports.fromEvent = function(event, source) {
 	if(typeof source.addEventListener === 'function') {
