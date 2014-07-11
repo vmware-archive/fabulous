@@ -66,8 +66,6 @@ PatchClient.prototype._patchLocal = function(patch) {
 PatchClient.prototype._handleReturnPatch = function(patch) {
 	this._patchBuffer.shift();
 	this._patchLocal(rebase(this._patchBuffer, patch));
-
-	return this._sendNext();
 };
 
 PatchClient.prototype._fetch = function() {
@@ -76,26 +74,26 @@ PatchClient.prototype._fetch = function() {
 
 PatchClient.prototype._sendNext = function() {
 	// TODO: This delay should be configurable or externalized
+	// TODO: Switch to Scheduler instead of promise delays?
 	var delay = this._patchBuffer.length === 0 ? 2000 : 500;
 
-	return when(this._patchBuffer).delay(delay)
-		.fold(function(self, buf) {
-			return self._send(buf[0] || []);
-		}, this)
-		.fold(dispatchReturnPatch, this);
+	return when(this._patchBuffer)
+		.delay(delay)
+		.with(this)
+		.then(function(buf) {
+			return this._send(buf[0] || []);
+		})
+		.then(this._handleReturnPatch)
+		.catch(function(error) {
+			// TODO: Need to surface this error somehow
+			// TODO: Need a configurable policy on how to handle remote patch failures
+			console.error(error.stack);
+		})
+		.finally(this._sendNext) // Ensure sync loop continues no matter what
+		.with(); // unset thisArg
 };
 
 PatchClient.prototype._send = function(msg) {
 	return this._queue(this._sender, { method: 'PATCH', entity: msg });
 };
 
-function dispatchReturnPatch(to, patch) {
-	return to._handleReturnPatch(patch);
-}
-
-function getContext(i, array) {
-	return {
-		before: array.slice(Math.max(0, i-3), i),
-		after: array.slice(Math.min(array.length, i), i+3)
-	};
-}

@@ -1,6 +1,7 @@
 var rest = require('rest');
 var mime = require('rest/interceptor/mime');
 var entity = require('rest/interceptor/entity');
+var errorCode = require('rest/interceptor/errorCode');
 var defaults = require('rest/interceptor/defaultRequest');
 var pathPrefix = require('rest/interceptor/pathPrefix');
 
@@ -10,10 +11,13 @@ var json = require('rest/mime/type/application/json');
 var localRegistry = registry.child();
 localRegistry.register('application/json-patch+json', json);
 
-var base = rest.wrap(mime, {
-	mime: 'application/json',
-	registry: localRegistry
-}).wrap(entity);
+var base = rest
+	.wrap(errorCode)
+	.wrap(mime, {
+		mime: 'application/json',
+		registry: localRegistry
+	})
+	.wrap(entity);
 
 module.exports = decorate(base);
 
