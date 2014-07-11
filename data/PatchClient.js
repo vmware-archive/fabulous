@@ -1,10 +1,13 @@
 var when = require('when');
 var jiff = require('jiff');
 var rebase = require('jiff/lib/rebase');
+var context = require('jiff/lib/context');
 
 var defaultHash = require('./defaultHash');
 var queue = require('../lib/queue');
 var fn = require('../lib/fn');
+
+var makeContext = context.makeContext(3);
 
 module.exports = PatchClient;
 
@@ -41,7 +44,7 @@ PatchClient.prototype.diff = function(data) {
 		return;
 	}
 
-	return jiff.diff(data, this.data, { hash: defaultHash, context: getContext });
+	return jiff.diff(data, this.data, { hash: defaultHash, makeContext: makeContext });
 };
 
 PatchClient.prototype.patch = function(patch) {
