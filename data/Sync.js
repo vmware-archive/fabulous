@@ -100,6 +100,7 @@ Sync.prototype = {
 	},
 
 	_fireChange: function() {
+		// TODO: This should be a stream/observable
 		var onChange = this.onChange;
 		if(typeof onChange === 'function') {
 			onChange(this.data);

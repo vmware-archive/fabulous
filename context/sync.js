@@ -1,5 +1,5 @@
 var when = require('when');
-var Scheduler = require('../data/Scheduler');
+var Scheduler = require('../lib/Scheduler');
 var runContext = require('./runContext');
 var curry = require('../lib/fn').curry;
 

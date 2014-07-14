@@ -50,9 +50,6 @@ PatchClient.prototype.diff = function(data) {
 PatchClient.prototype.patch = function(patch) {
 	this._patchLocal(patch);
 	this._patchBuffer.push(patch);
-
-//	return this._sendNext();
-//	return this._send(patch).fold(dispatchReturnPatch, this);
 };
 
 PatchClient.prototype._patchLocal = function(patch) {
