@@ -47,9 +47,9 @@ Sync.prototype = {
 
 	run: function(scheduler) {
 		this._scheduler = scheduler;
-		var self = this;
 		this._updateClientWindow();
 
+		var self = this;
 		return when(this._init())
 			.fold(initClients, this.clients)
 			.then(function(data) {

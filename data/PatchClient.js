@@ -11,40 +11,36 @@ var makeContext = context.makeContext(3);
 
 module.exports = PatchClient;
 
-function PatchClient(send, fetch) {
+function PatchClient(send, data) {
 	this._sender = send;
-	this._fetcher = fetch || this._sender;
 	this._queue = queue();
 	this.data = void 0;
-
 	this._patchBuffer = [];
+
+	this.set(data);
 }
 
 PatchClient.prototype.get = function() {
-	var self = this;
-	return this._fetch().then(function(data) {
-		self.data = fn.reduce(function(data, patch) {
-			return jiff.patch(patch, data);
-		}, data, self._patchBuffer);
-
-		return jiff.clone(data);
-	}).tap(function() {
-		self._sendNext();
-	});
+	return this.data;
 };
 
-PatchClient.prototype.set = function() {
-	// TODO: Should we allow this?  Seems safe enough
-	// Problem case: might get clobbered by inflight fetch() result
-	throw new Error('setting data not allowed');
+PatchClient.prototype.set = function(data) {
+	this.data = data;
+	when(data).with(this).then(this._initBuffer).then(this._sendNext);
+};
+
+PatchClient.prototype._initBuffer = function() {
+	this._patchBuffer = [];
 };
 
 PatchClient.prototype.diff = function(data) {
-	if(this.data === void 0) {
+	var local = when(this.data).inspect().value;
+
+	if(local === void 0) {
 		return;
 	}
 
-	return jiff.diff(data, this.data, { hash: defaultHash, makeContext: makeContext });
+	return jiff.diff(data, local, { hash: defaultHash, makeContext: makeContext });
 };
 
 PatchClient.prototype.patch = function(patch) {
@@ -53,11 +49,7 @@ PatchClient.prototype.patch = function(patch) {
 };
 
 PatchClient.prototype._patchLocal = function(patch) {
-	if(this.data === void 0) {
-		return;
-	}
-
-	this.data = jiff.patch(patch, this.data);
+	this.data = when(this.data).fold(jiff.patch, patch);
 };
 
 PatchClient.prototype._handleReturnPatch = function(patch) {
@@ -65,32 +57,22 @@ PatchClient.prototype._handleReturnPatch = function(patch) {
 	this._patchLocal(rebase(this._patchBuffer, patch));
 };
 
-PatchClient.prototype._fetch = function() {
-	return this._queue(this._fetcher);
-};
-
 PatchClient.prototype._sendNext = function() {
 	// TODO: This delay should be configurable or externalized
 	// TODO: Switch to Scheduler instead of promise delays?
-	var delay = this._patchBuffer.length === 0 ? 2000 : 500;
-
-	return when(this._patchBuffer)
-		.delay(delay)
-		.with(this)
-		.then(function(buf) {
-			return this._send(buf[0] || []);
-		})
+	return when(this._send(this._patchBuffer)).with(this)
 		.then(this._handleReturnPatch)
 		.catch(function(error) {
 			// TODO: Need to surface this error somehow
 			// TODO: Need a configurable policy on how to handle remote patch failures
 			console.error(error.stack);
 		})
+		.delay(this._patchBuffer.length > 0 ? 500 : 2000)
 		.finally(this._sendNext) // Ensure sync loop continues no matter what
 		.with(); // unset thisArg
 };
 
-PatchClient.prototype._send = function(msg) {
-	return this._queue(this._sender, { method: 'PATCH', entity: msg });
+PatchClient.prototype._send = function(buffer) {
+	return this._sender(buffer[0] || []);
 };
 
