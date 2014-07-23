@@ -1,6 +1,6 @@
 {
   "name": "fabulous",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "authors": [
     "Brian Cavalier <brian@hovercraftstudios.com>"
   ],
@@ -9,6 +9,7 @@
   "dependencies": {
     "jiff": "~0.6",
     "rest": "~1.1",
-    "when": "~3.3"
+    "when": "~3.4",
+    "most": "~0.5"
   }
 }

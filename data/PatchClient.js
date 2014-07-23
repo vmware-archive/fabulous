@@ -53,13 +53,14 @@ PatchClient.prototype._patchLocal = function(patch) {
 };
 
 PatchClient.prototype._handleReturnPatch = function(patch) {
+	patch = patch.entity;
 	this._patchBuffer.shift();
 	this._patchLocal(rebase(this._patchBuffer, patch));
 };
 
 PatchClient.prototype._sendNext = function() {
 	// TODO: This delay should be configurable or externalized
-	// TODO: Switch to Scheduler instead of promise delays?
+	// TODO: Switch to Retry-After
 	return when(this._send(this._patchBuffer)).with(this)
 		.then(this._handleReturnPatch)
 		.catch(function(error) {
@@ -75,4 +76,3 @@ PatchClient.prototype._sendNext = function() {
 PatchClient.prototype._send = function(buffer) {
 	return this._sender(buffer[0] || []);
 };
-

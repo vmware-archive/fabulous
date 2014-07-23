@@ -3,17 +3,13 @@ var when = require('when');
 
 var fn = require('../lib/fn');
 
-var defaultPeriod = 20;
-
 module.exports = Sync;
 
-function Sync(clients, period) {
+function Sync(clients) {
 	this.clients = clients;
 
 	this._clientWindow = void 0;
 	this._start = 0;
-	this._period = period || defaultPeriod;
-	this._scheduler = void 0;
 	this.data = void 0;
 
 	var self = this;
@@ -45,8 +41,7 @@ Sync.prototype = {
 		return getData(0, this.clients);
 	},
 
-	run: function(scheduler) {
-		this._scheduler = scheduler;
+	run: function(signal) {
 		this._updateClientWindow();
 
 		var self = this;
@@ -57,15 +52,13 @@ Sync.prototype = {
 				return self._fireChange();
 			})
 			.then(function() {
-				return scheduler.add(self._runSync);
+				signal.observe(self._runSync);
 			});
 	},
 
 	stop: function() {
-		if(this._scheduler !== void 0) {
-			this._scheduler.cancel(this._runSync);
-			this._scheduler = void 0;
-		}
+		// TODO: return End to signal
+		this._running = false;
 	},
 
 	sync: function() {
@@ -77,8 +70,6 @@ Sync.prototype = {
 		var len = this.clients.length;
 		this._start = (this._start + 1) % len;
 		this._syncClientIndex(client, this._start);
-
-		return this._period / len;
 	},
 
 	_syncClientIndex: function(client, start) {
@@ -100,7 +91,7 @@ Sync.prototype = {
 	},
 
 	_fireChange: function() {
-		// TODO: This should be a stream/observable
+		// TODO: This should be an observable
 		var onChange = this.onChange;
 		if(typeof onChange === 'function') {
 			onChange(this.data);

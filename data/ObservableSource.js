@@ -1,6 +1,6 @@
-module.exports = ObservableProvider;
+module.exports = ObservableSource;
 
-function ObservableProvider(observable) {
+function ObservableSource(observable) {
 	this.data = void 0;
 	observable.reduce(function(self, data) {
 		self.data = data;
@@ -8,6 +8,6 @@ function ObservableProvider(observable) {
 	}, this);
 }
 
-ObservableProvider.prototype.get = function() {
+ObservableSource.prototype.get = function() {
 	return this.data;
 };
