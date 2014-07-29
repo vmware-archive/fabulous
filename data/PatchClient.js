@@ -49,11 +49,10 @@ PatchClient.prototype.patch = function(patch) {
 };
 
 PatchClient.prototype._patchLocal = function(patch) {
-	this.data = when(this.data).fold(jiff.patch, patch);
+	this.data = when(this.data).fold(jiff.patch, patch).orElse(this.data);
 };
 
 PatchClient.prototype._handleReturnPatch = function(patch) {
-	patch = patch.entity;
 	this._patchBuffer.shift();
 	this._patchLocal(rebase(this._patchBuffer, patch));
 };
@@ -69,7 +68,7 @@ PatchClient.prototype._sendNext = function() {
 			console.error(error.stack);
 		})
 		.delay(this._patchBuffer.length > 0 ? 500 : 2000)
-		.finally(this._sendNext) // Ensure sync loop continues no matter what
+		.then(this._sendNext) // Ensure sync loop continues no matter what
 		.with(); // unset thisArg
 };
 
