@@ -145,7 +145,7 @@ function isDocument(x) {
 }
 
 function isObservable(x) {
-	return x instanceof Observable;
+	return x instanceof Observable.Stream;
 }
 
 function pushState(s) {
