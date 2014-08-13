@@ -11,7 +11,7 @@ var paths = require('../lib/path');
 var domPointer = require('./domPointer');
 var DomTreeMap = require('./DomTreeMap');
 var DomBuilder = require('./DomBuilder');
-var diff = require('./diff');
+var DomDifferencer = require('./DomDifferencer');
 var template = require('./template');
 var requestAnimationFrame = require('./requestAnimationFrame');
 
@@ -19,15 +19,22 @@ var fn = require('../lib/fn');
 
 module.exports = Dom;
 
-function Dom(node, events) {
+function Dom(node, options) {
+	if(!options) {
+		options = {};
+	}
+
+	var format = options.format || {};
+
 	this.node = template.replaceContents(node);
 	this._lists = findListTemplates(this.node);
 
 	var self = this;
 	this._domTreeMap = new DomTreeMap(this.node);
+	this._differencer = new DomDifferencer(this._domTreeMap, format.get);
 	this._builder = new DomBuilder(this._domTreeMap, function(path) {
 		return self._generateNode(path);
-	});
+	}, format.set);
 
 	this._shadowTreeMap = void 0;
 	this._shadowBuilder = void 0;
@@ -41,12 +48,21 @@ function Dom(node, events) {
 		});
 	}
 
+	if(typeof options.patchTransform === 'function') {
+		this._transformPatch = options.patchTransform;
+	}
+
 	this._runPatch = function() {
 		self._patch();
 	};
 
 	this._patches = [];
-	this._events = this._initEvents(events);
+
+	this._observe = function () {
+		self._hasChanged = true;
+	};
+
+	this._events = this._initEvents(options.events);
 }
 
 Dom.prototype = {
@@ -74,21 +90,23 @@ Dom.prototype = {
 		}
 		this._hasChanged = false;
 
-		var d = diff(this._domTreeMap, data);
+		var d = this._differencer.diff(data);
 		if(this._shadowTreeMap) {
-			d = diff(this._shadowTreeMap, data, d);
+			d = this._differencer.appendDiff(data, d);
 		}
 
 		if(d !== void 0 && d.length > 0) {
 			this._enqueuePatch(d);
 		}
 
-		return  d;
+		return this._transformPatch(d);
 	},
 
 	patch: function(patch) {
-		this._enqueuePatch(patch);
+		this._enqueuePatch(this._transformPatch(patch));
 	},
+
+	_transformPatch: fn.identity,
 
 	_enqueuePatch: function(patch) {
 		if(this._patches.length === 0) {
@@ -115,7 +133,6 @@ Dom.prototype = {
 	_initEvents: function(events) {
 		var ev = normalizeEvents(events);
 
-		this._observe = this._createObserver();
 		this.node = fn.reduce(function(self, event) {
 			self.node.addEventListener(event, self._observe);
 			return self;
@@ -124,18 +141,9 @@ Dom.prototype = {
 		return ev;
 	},
 
-	_createObserver: function() {
-		var self = this;
-		return function () {
-			self._hasChanged = true;
-		};
-	},
-
-	_observe: function() {},
-
 	_generateNode: function(path) {
-		var key = paths.dirname(path);
-		var t = this._lists[key];
+		var key = paths.basename(paths.dirname(path));
+		var t = this._lists[key||''];
 		if(t) {
 			return t.template.cloneNode(true);
 		}

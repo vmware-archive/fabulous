@@ -2,11 +2,15 @@ var fn = require('../lib/fn');
 var object = require('../lib/object');
 var path = require('../lib/path');
 var Dom = require('./Dom');
+var base = require('./base');
 var events = require('./events');
 
 var Document = require('../Document');
 var Observable = require('../Observable');
 var Sync = require('../data/Sync');
+
+var defaultGetValue = base.getValue;
+var defaultSetValue = base.setValue;
 
 var eventAttrs = fn.reduce(function(eventAttrs, e) {
 	eventAttrs['on'+e] = eventAttrs['data-on'+e] = e;
@@ -104,17 +108,43 @@ function scanModel(name, node, state) {
 function initModels(defaultSignal, models, context) {
 	var keys = Object.keys(models);
 
+	var format = {
+		get: function(path, node) {
+			if(node.format === void 0) {
+				return defaultGetValue(node.node);
+			}
+			return context[node.format].get(node.node);
+		},
+		set: function(value, path, node) {
+			if(node.format === void 0) {
+				return defaultSetValue(node.node, value);
+			}
+			return context[node.format].set(value, node.node);
+		}
+	};
+
 	return fn.map(function(key) {
+		var model = key.split(/\s*\|\s*/);
 		var sync = models[key];
+		var transform = model[1];
 		var signal;
 		if(sync.on) {
 			var on = object.find(sync.on.replace('.', '/'), context);
 			signal = createObserver(on);
 		}
 
+		var patchTransform;
+		if(transform) {
+			patchTransform = object.find(transform.replace('.', '/'), context);
+		}
+
 		var s = new Sync([
-			createObserver(object.find(key.replace('.', '/'), context)),
-			new Dom(sync.node, signal)
+			createObserver(object.find(model[0].replace('.', '/'), context)),
+			new Dom(sync.node, {
+				events: signal,
+				format: format,
+				patchTransform: patchTransform ? patchTransform.target[patchTransform.key] : void 0
+			})
 		]);
 
 		s.run(defaultSignal);

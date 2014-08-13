@@ -23,7 +23,7 @@ function domPointer (end, start) {
 		} else {
 			segment = start.getAttribute('data-model');
 			if(segment) {
-				return path.join(segment, p);
+				return path.join(segment.split(/\s*\|\s*/)[0], p);
 			}
 			segment = start.getAttribute('name') || start.getAttribute('data-path');
 		}

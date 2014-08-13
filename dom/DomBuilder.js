@@ -15,9 +15,14 @@ var fn = require('../lib/fn');
 
 module.exports = DomBuilder;
 
-function DomBuilder(map, create) {
+function defaultSetValue(value, node) {
+	base.setValue(node.node, value);
+}
+
+function DomBuilder(map, create, setValue) {
 	this._create = create;
 	this._map = map;
+	this._setValue = typeof setValue === 'function' ? setValue : defaultSetValue;
 }
 
 DomBuilder.prototype.patch = function(patch) {
@@ -34,8 +39,11 @@ DomBuilder.prototype.patch = function(patch) {
 };
 
 DomBuilder.prototype.build = function(data) {
-	var root = this._map.findNode('');
-	return root && this._buildNodeValue('', data, root);
+	var roots = this._map.find('');
+	var self = this;
+	return fn.map(function(root) {
+		return self._buildNodeValue('', data, root);
+	}, roots);
 };
 
 DomBuilder.prototype._buildNodeValue = function(path, value, node) {
@@ -46,14 +54,14 @@ DomBuilder.prototype._buildNodeValue = function(path, value, node) {
 		}, Object.keys(value));
 	}
 
-	return base.setValue(node, value);
+	return this._setValue(value, path, node);
 };
 
 DomBuilder.prototype.replace = function(path, value) {
 	if(path === '') {
 		return this.build(value);
 	}
-	var nodes = this._map.findNodes(path);
+	var nodes = this._map.find(path);
 
 	var self = this;
 	return fn.map(function(node) {
@@ -65,7 +73,7 @@ DomBuilder.prototype.add = function(path, value) {
 	if(path === '') {
 		return this.build(value);
 	}
-	var parents = this._map.findNodes(paths.dirname(path));
+	var parents = this._map.find(paths.dirname(path));
 	var self = this;
 	return fn.map(function(parent) {
 		return parent && self._addNodeValue(path, value, parent);
@@ -73,13 +81,14 @@ DomBuilder.prototype.add = function(path, value) {
 };
 
 DomBuilder.prototype.remove = function(path) {
-	var nodes = this._map.findNodes(path);
+	var nodes = this._map.find(path);
 
 	return fn.reduce(function(map, node) {
-		map.remove(node);
-		var parent = node.parentNode;
+		var domnode = node.node;
+		map.remove(domnode);
+		var parent = domnode.parentNode;
 		if(parent) {
-			parent.removeChild(node);
+			parent.removeChild(domnode);
 		}
 
 		return map;
@@ -88,24 +97,24 @@ DomBuilder.prototype.remove = function(path) {
 
 DomBuilder.prototype._replaceNodeValue = function(path, value, node) {
 	if(Array.isArray(value)) {
-		return this._setNodeValueArray(insertChildAt, path, value, node);
+		return this._buildNodeValue(path, value, node);
 	}
 
 	if(typeof value === 'object' && value !== null) {
 		return this._replaceNodeValueObject(path, value, node);
 	}
 
-	return base.setValue(node, value);
+	return this._setValue(value, path, node);
 };
 
 DomBuilder.prototype._addNodeValue = function(path, value, node) {
-	var list = this._findListChild(node);
+	var list = this._findListChild(node.node);
 	if(list) {
-		return this._setNodeValueArray(insertChildAt, path, value, list);
+		return this._setNodeValueArray(insertChildAt, path, value, node, list);
 	}
 
 	if(Array.isArray(value)) {
-		return this._setNodeValueArray(insertChildAt, path, value, node);
+		return this._setNodeValueArray(insertChildAt, path, value, node, node);
 	}
 
 	if(typeof value === 'object' && value !== null) {
@@ -117,13 +126,14 @@ DomBuilder.prototype._addNodeValue = function(path, value, node) {
 		this._map.add(path, valueNode);
 	}
 
-	var nodes = this._map.findNodes(path);
+	var nodes = this._map.find(path);
+	var self = this;
 	return fn.map(function(node) {
-		return base.setValue(node, value);
+		return self._setValue(value, path, node.node);
 	}, nodes);
 };
 
-DomBuilder.prototype._setNodeValueArray = function(insertChild, path, value, list) {
+DomBuilder.prototype._setNodeValueArray = function(insertChild, path, value, node, list) {
 	var i = parseInt(paths.basename(path), 10);
 	var replacement = this._create(path);
 	var removed = insertChild(list, replacement, i);
@@ -132,9 +142,9 @@ DomBuilder.prototype._setNodeValueArray = function(insertChild, path, value, lis
 		this._map.remove(removed);
 	}
 
-	this._map.add(path, replacement);
+	node = this._map.add(path, replacement);
 
-	return this._replaceNodeValue(path, value, replacement);
+	return this._replaceNodeValue(path, value, node);
 };
 
 DomBuilder.prototype._replaceNodeValueObject = function(path, object /*, node*/) {
@@ -143,7 +153,7 @@ DomBuilder.prototype._replaceNodeValueObject = function(path, object /*, node*/)
 		var p = path + '/' + key;
 		var value = object[key];
 
-		var nodes = self._map.findNodes(p);
+		var nodes = self._map.find(p);
 		return fn.map(function(node) {
 			return self._replaceNodeValue(p, value, node);
 		}, nodes);
@@ -153,10 +163,10 @@ DomBuilder.prototype._replaceNodeValueObject = function(path, object /*, node*/)
 DomBuilder.prototype._addNodeValueObject = function(path, object, node) {
 	var child = this._create(path);
 	if(child) {
-		node.appendChild(child);
-		this._map.add(path, child);
+		node.node.appendChild(child);
+		node = this._map.add(path, child);
 
-		return this._replaceNodeValue(path, object, child);
+		return this._replaceNodeValue(path, object, node);
 	}
 };
 

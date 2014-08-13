@@ -31,9 +31,10 @@ DomTreeMap.prototype = {
 			if (t.isList) {
 				t.list.splice(parseInt(key, 10), 0, build(node));
 			} else {
-				t.hash[key] = append(build(node), t.hash[key]);
+				t.hash[key] = append(build(node), t.hash[key], key);
 			}
 		}
+		return t;
 	},
 
 	replace: function(path, node) {
@@ -44,9 +45,10 @@ DomTreeMap.prototype = {
 				t.list[key] = build(node);
 			} else {
 				var forest = removeNode(node, t.hash[key]);
-				t.hash[key] = append(build(node), forest);
+				t.hash[key] = append(build(node), forest, key);
 			}
 		}
+		return t;
 	},
 
 	remove: function(node) {
@@ -84,6 +86,20 @@ DomTreeMap.prototype = {
 		return Array.isArray(t) ? fn.map(function(t) {
 			return t.node;
 		}, t) : [t.node];
+	},
+
+	find: function(path) {
+		var t = findParent(this._tree, path);
+		var key = paths.basename(path);
+		if(key) {
+			t = t && getSubtree(t, key);
+		}
+
+		if(t === void 0) {
+			return [];
+		}
+
+		return Array.isArray(t) ? t : [t];
 	}
 };
 
@@ -106,8 +122,8 @@ function getArray(i, a) {
 	return a === void 0 ? void 0 : a[i];
 }
 
-function build(node) {
-	return appendChildren({ node: node, hash: void 0, list: void 0, isList: false }, node);
+function build(node, format) {
+	return appendChildren({ node: node, hash: void 0, list: void 0, isList: false, format: format }, node);
 }
 
 function appendChildren(tree, node) {
@@ -135,28 +151,46 @@ function appendHashChildren(tree, children) {
 	var hash = tree.hash === void 0
 		? (tree.hash = {}) : tree.hash;
 
-	var i, child, key;
+	var i, child;
 	for(i=0; i<children.length; ++i) {
 		child = children[i];
 		if(child.hasAttribute('data-path')) {
-			key = child.getAttribute('data-path');
-			hash[key] = append(build(child), hash[key]);
+			appendChild(hash, child.getAttribute('data-path'), child);
 		} else if(child.hasAttribute('name')) {
-			key = child.getAttribute('name');
-			hash[key] = append(build(child), hash[key]);
+			appendChild(hash, child.getAttribute('name'), child);
 		} else {
 			appendChildren(tree, child);
 		}
 	}
+
 	return tree;
 }
 
-function append(x, list) {
-	if(list === void 0) {
-		return [x];
+function appendChild (hash, key, child) {
+	var format = key.split(/\s*\|\s*/);
+	key = format[0];
+	hash[key] = append(build(child, format[1]), hash[key]);
+}
+
+function append(x, tree) {
+	if(tree === void 0) {
+		return x;
 	}
-	list.push(x);
-	return list;
+
+	return {
+		isList: x.isList,
+		node: tree.node,
+		list: x.isList ? fn.concat(tree.list, x.list) : tree.list,
+		hash: x.isList ? tree.hash : mergeHash(tree.hash, x.hash),
+		format: x.format
+	};
+}
+
+function mergeHash(dst, src) {
+	Object.keys(src).reduce(function(dst, sk) {
+		dst[sk] = src[sk];
+		return dst;
+	}, dst);
 }
 
 function removeNode (node, forest) {
