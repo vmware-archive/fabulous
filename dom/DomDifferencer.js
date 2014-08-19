@@ -49,7 +49,7 @@ DomDifferencer.prototype._runDiff = function(seen, value, path, node, patch) {
 
 	var nodeValue = this._getValue(path, node);
 	return nodeValue != value
-		? addReplace(path, nodeValue, value, patch)
+		? addReplace(value, nodeValue, path, patch)
 		: patch;
 };
 
