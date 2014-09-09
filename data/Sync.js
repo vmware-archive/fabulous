@@ -120,7 +120,7 @@ function initClients(clients, source) {
 	}, clients);
 
 	return fn.reduce(function(data, client) {
-		client.set(data);
+		client.set(jiff.clone(data));
 		return data;
 	}, source.data, c);
 }
