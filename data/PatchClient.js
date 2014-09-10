@@ -1,6 +1,5 @@
 var when = require('when');
 var jiff = require('jiff');
-var rebase = require('jiff/lib/rebase');
 var context = require('jiff/lib/context');
 
 var defaultHash = require('./defaultHash');
