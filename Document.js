@@ -20,7 +20,7 @@ exports.fromProperty = fn.curry(fromProperty);
 exports.fromFunction = fromFunction;
 exports.fromObservable = fromObservable;
 exports.fromPatchRemote = fromPatchRemote;
-exports.fromPatchRemote = fromPatchSyncRemote;
+exports.fromPatchSyncRemote = fromPatchSyncRemote;
 
 exports.sync = sync;
 exports.syncOn = fn.curry(syncOn);
