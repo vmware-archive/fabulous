@@ -7,6 +7,7 @@ var PropertySource = require('./data/PropertySource');
 var FunctionSource = require('./data/FunctionSource');
 var ObservableSource = require('./data/ObservableSource');
 
+var PatchSyncClient = require('./data/PatchSyncClient');
 var PatchClient = require('./data/PatchClient');
 
 var Sync = require('./data/Sync');
@@ -19,6 +20,7 @@ exports.fromProperty = fn.curry(fromProperty);
 exports.fromFunction = fromFunction;
 exports.fromObservable = fromObservable;
 exports.fromPatchRemote = fromPatchRemote;
+exports.fromPatchRemote = fromPatchSyncRemote;
 
 exports.sync = sync;
 exports.syncOn = fn.curry(syncOn);
@@ -50,4 +52,8 @@ function syncOn(signal, documents) {
 
 function fromPatchRemote(send, data) {
 	return new PatchClient(send, data);
+}
+
+function fromPatchSyncRemote(send, data) {
+	return new PatchSyncClient(send, data);
 }

@@ -11,8 +11,8 @@ var makeContext = context.makeContext(3);
 
 module.exports = PatchClient;
 
-function PatchClient(send, data) {
-	this._sender = send;
+function PatchClient(client, data) {
+	this._sender = client;
 	this._queue = queue();
 	this.data = void 0;
 	this._patchBuffer = [];
@@ -26,7 +26,7 @@ PatchClient.prototype.get = function() {
 
 PatchClient.prototype.set = function(data) {
 	this.data = data;
-	when(data).with(this).then(this._initBuffer).then(this._sendNext);
+	when(data).with(this).then(this._initBuffer);
 };
 
 PatchClient.prototype._initBuffer = function() {
@@ -46,6 +46,8 @@ PatchClient.prototype.diff = function(data) {
 PatchClient.prototype.patch = function(patch) {
 	this._patchLocal(patch);
 	this._patchBuffer.push(patch);
+
+	return this._sendNext();
 };
 
 PatchClient.prototype._patchLocal = function(patch) {
@@ -53,25 +55,21 @@ PatchClient.prototype._patchLocal = function(patch) {
 };
 
 PatchClient.prototype._handleReturnPatch = function(patch) {
-	this._patchBuffer.shift();
-	this._patchLocal(rebase(this._patchBuffer, patch));
+	this._patchLocal(patch);
 };
 
 PatchClient.prototype._sendNext = function() {
-	// TODO: This delay should be configurable or externalized
-	// TODO: Switch to Retry-After
-	return when(this._send(this._patchBuffer)).with(this)
-		.then(this._handleReturnPatch)
-		.catch(function(error) {
-			// TODO: Need to surface this error somehow
-			// TODO: Need a configurable policy on how to handle remote patch failures
-			console.error(error.stack);
-		})
-		.delay(this._patchBuffer.length > 0 ? 500 : 2000)
-		.then(this._sendNext) // Ensure sync loop continues no matter what
-		.with(); // unset thisArg
+	return this._send(this._patchBuffer)
+		.with(this)
+		.then(this._handleReturnPatch);
 };
 
 PatchClient.prototype._send = function(buffer) {
-	return this._sender(buffer[0] || []);
+	if(buffer.length) {
+		this._queue(this._sender, buffer.shift())
+			.with(this)
+			.then(this._handleReturnPatch);
+	}
+
+	return when.resolve();
 };
