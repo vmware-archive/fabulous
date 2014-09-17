@@ -129,7 +129,7 @@ DomBuilder.prototype._addNodeValue = function(path, value, node) {
 	var nodes = this._map.find(path);
 	var self = this;
 	return fn.map(function(node) {
-		return self._setValue(value, path, node.node);
+		return self._setValue(value, path, node);
 	}, nodes);
 };
 
