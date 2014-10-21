@@ -1,7 +1,6 @@
 var when = require('when');
 var jiff = require('jiff');
 var defaultHash = require('./defaultHash');
-var Sync = require('./Sync');
 var fn = require('../lib/fn');
 
 module.exports = ProviderClient;
@@ -53,13 +52,14 @@ ProviderClient.prototype.patch = function(patch) {
 
 function valueOf(promise) {
 	var i = when(promise).inspect();
+
 	if(i.state === 'pending') {
 		return;
 	}
 
 	if(i.state === 'fulfilled') {
 		return i.value;
-	} else {
-		throw i.reason;
 	}
+
+	throw i.reason;
 }

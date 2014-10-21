@@ -5,5 +5,5 @@ exports.run = curry(scanDocument);
 exports.runAt = curry(scan);
 
 function scanDocument(builder, context) {
-	return scan(document.body, builder, context);
+	return scan(builder, document.body, context);
 }

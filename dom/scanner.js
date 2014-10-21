@@ -100,7 +100,7 @@ function scanModel(name, node, state) {
 	var models = state.models;
 
 	var syncEvents = node.getAttribute('data-sync');
-	models[name] = { node: node, on: syncEvents };
+	models[name] = append({ node: node, on: syncEvents }, models[name]);
 
 	return state;
 }
@@ -108,49 +108,64 @@ function scanModel(name, node, state) {
 function initModels(defaultSignal, models, context) {
 	var keys = Object.keys(models);
 
-	var format = {
-		get: function(path, node) {
-			if(node.format === void 0) {
+	var format = createFormatter(context);
+
+	return fn.map(function(key) {
+
+		var model = key.split(/\s*\|\s*/);
+
+		return fn.map(function(sync) {
+			return initModelSync(model, defaultSignal, sync, context, format);
+		}, models[key]);
+
+	}, keys);
+}
+
+function initModelSync (model, defaultSignal, sync, context, format) {
+	var transform = model[1];
+	var signal = defaultSignal;
+	if (sync.on) {
+		var on = object.find(sync.on.replace('.', '/'), context);
+		if (on) {
+			signal = on.target[on.key];
+		}
+	}
+
+	var patchTransform;
+	if (transform) {
+		patchTransform = object.find(transform.replace('.', '/'), context);
+	}
+
+	var s = new Sync([
+		createObserver(object.find(model[0].replace('.', '/'), context)),
+		new Dom(sync.node, {
+			events: void 0,//signal,
+			format: format,
+			patchTransform: patchTransform
+				? patchTransform.target[patchTransform.key]
+				: void 0
+		})
+	]);
+
+	s.run(signal);
+	return s;
+}
+
+function createFormatter (context) {
+	return {
+		get: function (path, node) {
+			if (node.format === void 0) {
 				return defaultGetValue(node.node);
 			}
 			return context[node.format].get(node.node);
 		},
-		set: function(value, path, node) {
-			if(node.format === void 0) {
+		set: function (value, path, node) {
+			if (node.format === void 0) {
 				return defaultSetValue(node.node, value);
 			}
 			return context[node.format].set(value, node.node);
 		}
 	};
-
-	return fn.map(function(key) {
-		var model = key.split(/\s*\|\s*/);
-		var sync = models[key];
-		var transform = model[1];
-		var signal;
-		if(sync.on) {
-			var on = object.find(sync.on.replace('.', '/'), context);
-			signal = createObserver(on);
-		}
-
-		var patchTransform;
-		if(transform) {
-			patchTransform = object.find(transform.replace('.', '/'), context);
-		}
-
-		var s = new Sync([
-			createObserver(object.find(model[0].replace('.', '/'), context)),
-			new Dom(sync.node, {
-				events: signal,
-				format: format,
-				patchTransform: patchTransform ? patchTransform.target[patchTransform.key] : void 0
-			})
-		]);
-
-		s.run(defaultSignal);
-		return s;
-
-	}, keys);
 }
 
 function createObserver (p) {
@@ -168,6 +183,15 @@ function createObserver (p) {
 	}
 
 	return doc;
+}
+
+function append(x, list) {
+	if(list === void 0) {
+		return [x];
+	}
+
+	list.push(x);
+	return list;
 }
 
 function isDocument(x) {

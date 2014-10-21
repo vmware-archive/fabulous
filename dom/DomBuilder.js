@@ -104,7 +104,11 @@ DomBuilder.prototype._replaceNodeValue = function(path, value, node) {
 		return this._replaceNodeValueObject(path, value, node);
 	}
 
-	return this._setValue(value, path, node);
+	var nodes = this._map.find(path);
+	var self = this;
+	return fn.map(function(node) {
+		return self._setValue(value, path, node);
+	}, nodes);
 };
 
 DomBuilder.prototype._addNodeValue = function(path, value, node) {

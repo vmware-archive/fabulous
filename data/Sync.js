@@ -49,7 +49,6 @@ Sync.prototype = {
 			.fold(initClients, this.clients)
 			.then(function(data) {
 				self.data = data == null ? null : jiff.clone(data);
-				return self._fireChange();
 			})
 			.then(function() {
 				signal.observe(self._runSync);
@@ -77,7 +76,6 @@ Sync.prototype = {
 		if(patch && patch.length > 0) {
 			this.data = jiff.patch(patch, this.data);
 			this._patchClients(patch, start);
-			this._fireChange();
 		}
 	},
 
@@ -88,17 +86,7 @@ Sync.prototype = {
 		for(var i=start; i<end; ++i) {
 			clientsToPatch[i].patch(patch);
 		}
-	},
-
-	_fireChange: function() {
-		// TODO: This should be an observable
-		var onChange = this.onChange;
-		if(typeof onChange === 'function') {
-			onChange(this.data);
-		}
-	},
-
-	onChange: void 0 /* function */
+	}
 };
 
 function getData(i, clients) {
