@@ -18,7 +18,7 @@
   "dependencies": {
     "jiff": "~0.6",
     "rest": "~1.2",
-    "when": "~3.4",
-    "most": "~0.7"
+    "when": "~3.5",
+    "most": "~0.8"
   }
 }
