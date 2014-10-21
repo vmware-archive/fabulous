@@ -8,7 +8,19 @@ var registry = require('rest/mime/registry');
 var json = require('rest/mime/type/application/json');
 
 var localRegistry = registry.child();
-localRegistry.register('application/json-patch+json', json);
+var jsonPatchType = 'application/json-patch+json';
+var defaultProps = {
+	get:  { method: 'GET' },
+	put:  { method: 'PUT' },
+	post: { method: 'POST' },
+	'delete': { method: 'DELETE' },
+	patch: {
+		method: 'PATCH',
+		headers: { 'Content-Type': 'application/json-patch+json' }
+	}
+};
+
+localRegistry.register(jsonPatchType, json);
 
 var base = rest
 	.wrap(errorCode)
@@ -24,11 +36,9 @@ function at(url, base) {
 }
 
 function decorate(client) {
-	client.get       = client.wrap(defaults, { method: 'GET' });
-	client.put       = client.wrap(defaults, { method: 'PUT' });
-	client.post      = client.wrap(defaults, { method: 'POST' });
-	client['delete'] = client.wrap(defaults, { method: 'DELETE' });
-	client.patch     = client.wrap(defaults, { method: 'PATCH' });
+	for(var p in defaultProps) {
+		client[p] = client.wrap(defaults, defaultProps[p]);
+	}
 
 	client.at = function(url) {
 		return at(url, client);
