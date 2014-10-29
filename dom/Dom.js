@@ -8,6 +8,7 @@
  * @author John Hann
 */
 var paths = require('../lib/path');
+var object = require('../lib/object');
 var domPointer = require('./domPointer');
 var DomTreeMap = require('./DomTreeMap');
 var DomBuilder = require('./DomBuilder');
@@ -36,17 +37,6 @@ function Dom(node, options) {
 		return self._generateNode(path);
 	}, format.set);
 
-	this._shadowTreeMap = void 0;
-	this._shadowBuilder = void 0;
-
-	var shadow = this.node.shadowRoot;
-	if(shadow) {
-		shadow.innerHTML = template.fromString(shadow.innerHTML);
-		this._shadowTreeMap = new DomTreeMap(shadow);
-		this._shadowBuilder = new DomBuilder(this._shadowTreeMap, function(path) {
-			return self._generateNode(path);
-		});
-	}
 
 	if(typeof options.patchTransform === 'function') {
 		this._transformPatch = options.patchTransform;
@@ -56,10 +46,10 @@ function Dom(node, options) {
 		self._patch();
 	};
 
+	this._diffRoots = [];
 	this._patches = [];
-
-	this._observe = function () {
-		self._hasChanged = true;
+	this._observe = function (e) {
+		self._updateDiffRoots(e.target);
 	};
 
 	this._events = this._initEvents(options.events);
@@ -75,27 +65,25 @@ Dom.prototype = {
 			return;
 		}
 
-		var result = this._builder.build(data);
-
-		if(this._shadowBuilder) {
-			this._shadowBuilder.build(data);
-		}
-
-		return result;
+		return this._builder.build(data);
 	},
 
 	diff: function(data) {
-		if(!this._hasChanged) {
+		if(this._diffRoots.length === 0) {
 			return;
 		}
-		this._hasChanged = false;
 
-		var d = this._differencer.diff(data);
-		if(this._shadowTreeMap) {
-			d = this._differencer.appendDiff(data, d);
+		var roots = this._diffRoots;
+		this._diffRoots = [];
+
+		var dp, p, d = [];
+		for(var i=0; i<roots.length; ++i) {
+			dp = domPointer(this.node, roots[i]);
+			p = object.find(dp, data);
+			d = this._differencer.appendDiffNode(p.target[p.key], dp, d);
 		}
 
-		if(d !== void 0 && d.length > 0) {
+		if(d.length > 0) {
 			this._enqueuePatch(d);
 		}
 
@@ -104,6 +92,27 @@ Dom.prototype = {
 
 	patch: function(patch) {
 		this._enqueuePatch(this._transformPatch(patch));
+	},
+
+	_updateDiffRoots: function(target) {
+		var roots = this._diffRoots;
+		var newRoots = [];
+		for(var i=0, root; i<roots.length; ++i) {
+			root = roots[i];
+			// If an ancestor of target is already present, no need to include target
+			if(isAncestor(this.node, root, target)) {
+				return;
+			}
+
+			// Retain existing roots that are not descendants of target
+			// IOW *remove* descendants of target
+			if(!isAncestor(this.node, target, root)) {
+				newRoots.push(root);
+			}
+		}
+
+		newRoots.push(target);
+		this._diffRoots = newRoots;
 	},
 
 	_transformPatch: fn.identity,
@@ -119,14 +128,9 @@ Dom.prototype = {
 		var patches = this._patches;
 		this._patches = [];
 
-		var hasShadow = this._shadowBuilder !== void 0;
-
 		for(var i=0, l=patches.length, p; i<l; ++i) {
 			p = patches[i];
 			this._builder.patch(p);
-			if(hasShadow) {
-				this._shadowBuilder.patch(p)
-			}
 		}
 	},
 
@@ -135,7 +139,7 @@ Dom.prototype = {
 
 		this.node = fn.reduce(function(self, event) {
 			self.node.addEventListener(event, self._observe);
-			return self;
+			return self.node;
 		}, this, ev);
 
 		return ev;
@@ -170,4 +174,17 @@ function findListTemplates(root) {
 
 		return lists;
 	}, {}, root.querySelectorAll('[data-list]'));
+}
+
+// Is a an ancestor of node
+function isAncestor(root, a, node) {
+	if(a === node) {
+		return true;
+	}
+
+	if(a === root) {
+		return false;
+	}
+
+	return isAncestor(root, a, node.parentNode);
 }

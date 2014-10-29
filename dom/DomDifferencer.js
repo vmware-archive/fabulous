@@ -25,19 +25,23 @@ function DomDifferencer(map, getValue) {
 }
 
 DomDifferencer.prototype.diff = function(data) {
-	return this.appendDiff(data, []);
+	return this.appendDiffNode(data, '', []);
+};
+
+DomDifferencer.prototype.diffNode = function(data, path) {
+	return this.appendDiffNode(data, path, [])
 };
 
 DomDifferencer.prototype.appendDiff = function(data, patch) {
-	var nodes = this._map.find('');
-	var self = this;
-	return fn.reduce(function(patch, node) {
-		return self.diffNode(data, '', node, patch);
-	}, patch, nodes);
+	return this.appendDiffNode(data, '', patch);
 };
 
-DomDifferencer.prototype.diffNode = function(data, path, node, patch) {
-	return this._runDiff({}, data, path, node, patch);
+DomDifferencer.prototype.appendDiffNode = function(data, path, patch) {
+	var nodes = this._map.find(path);
+	var self = this;
+	return fn.reduce(function(patch, node) {
+		return self._runDiff({}, data, path, node, patch);
+	}, patch, nodes);
 };
 
 DomDifferencer.prototype._runDiff = function(seen, value, path, node, patch) {
