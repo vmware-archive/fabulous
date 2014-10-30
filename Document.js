@@ -1,4 +1,3 @@
-var when = require('when');
 var most = require('most');
 
 var ProviderClient = require('./data/ProviderClient');
@@ -7,6 +6,7 @@ var PropertySource = require('./data/PropertySource');
 var FunctionSource = require('./data/FunctionSource');
 var ObservableSource = require('./data/ObservableSource');
 
+var DSClient = require('./data/DSClient');
 var PatchSyncClient = require('./data/PatchSyncClient');
 var PatchClient = require('./data/PatchClient');
 
@@ -21,6 +21,7 @@ exports.fromFunction = fromFunction;
 exports.fromObservable = fromObservable;
 exports.fromPatchRemote = fromPatchRemote;
 exports.fromPatchSyncRemote = fromPatchSyncRemote;
+exports.fromDSRemote = fromDSRemote;
 
 exports.sync = sync;
 exports.syncOn = fn.curry(syncOn);
@@ -56,4 +57,8 @@ function fromPatchRemote(send, data) {
 
 function fromPatchSyncRemote(send, data) {
 	return new PatchSyncClient(send, data);
+}
+
+function fromDSRemote(send, data) {
+	return new DSClient(send, data);
 }
