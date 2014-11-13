@@ -6,8 +6,8 @@ var fn = require('../lib/fn');
 
 module.exports = DSClient;
 
-function DSClient(send, data) {
-	PatchSyncClient.call(this, send, data);
+function DSClient(send, data, store) {
+	PatchSyncClient.call(this, send, data, store);
 	this.version = 0;
 	this._remoteVersion = 0;
 }
@@ -19,15 +19,24 @@ DSClient.prototype.patch = function(patch) {
 	this._patchLocal(patch);
 
 	this.version += 1;
-	this._patchBuffer.push({
+	var patchBuffer = this.store.get();
+
+	patchBuffer.push({
 		patch: patch,
 		localVersion: this.version,
 		remoteVersion: this._remoteVersion
 	});
+
+	this.store.set(patchBuffer);
 };
 
-DSClient.prototype._send = function(msg) {
-	return this._sender(msg);
+DSClient.prototype._initBuffer = function() {
+	PatchSyncClient.prototype._initBuffer.call(this);
+	var patchBuffer = this.store.get();
+
+	if(patchBuffer.length > 0) {
+		this.version = patchBuffer[patchBuffer.length - 1].localVersion;
+	}
 };
 
 DSClient.prototype._handleReturnPatch = function(versionedPatches) {
@@ -59,7 +68,11 @@ DSClient.prototype._pruneChanges = function() {
 	// IOW keep only patches that have a higher remoteVersion
 	// than the version the server just told us it has.
 	var remoteVersion = this._remoteVersion;
-	this._patchBuffer = fn.filter(function (versionedPatch) {
+	var patchBuffer = this.store.get();
+
+	patchBuffer = fn.filter(function (versionedPatch) {
 		return versionedPatch.remoteVersion > remoteVersion;
-	}, this._patchBuffer);
+	}, patchBuffer);
+
+	this.store.set(patchBuffer);
 };

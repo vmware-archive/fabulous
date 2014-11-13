@@ -1,5 +1,6 @@
 var jiff = require('jiff');
 var defaultHash = require('./defaultHash');
+var LocalStorageStore = require('../lib/store/LocalStorageStore');
 
 module.exports = LocalStorage;
 
@@ -8,22 +9,22 @@ module.exports = LocalStorage;
  * @constructor
  */
 function LocalStorage(namespace, init) {
-	this._namespace = namespace || '';
+	this.store = new LocalStorageStore(namespace);
 	this._init = init || defaultInit;
 }
 
 LocalStorage.prototype.get = function() {
-	var data = localStorage.getItem(this._namespace);
+	var data = this.store.get();
 	if(data == null) {
 		var init = this._init;
 		return typeof init === 'function' ? init() : init;
-	} else {
-		return JSON.parse(data);
 	}
+
+	return data;
 };
 
 LocalStorage.prototype.set = function(data) {
-	localStorage.setItem(this._namespace, JSON.stringify(data));
+	this.store = this.store.set(data);
 };
 
 LocalStorage.prototype.diff = function(data) {

@@ -5,15 +5,18 @@ var context = require('jiff/lib/context');
 
 var defaultHash = require('./defaultHash');
 var fn = require('../lib/fn');
+var MemoryStore = require('../lib/store/MemoryStore');
 
 var makeContext = context.makeContext(3);
 
 module.exports = PatchSyncClient;
 
-function PatchSyncClient(send, data) {
-	this._sender = send;
+function PatchSyncClient(send, data, store) {
 	this.data = void 0;
-	this._patchBuffer = [];
+	this.store = store || new MemoryStore();
+
+	this._send = send;
+	this._running = false;
 
 	this.set(data);
 }
@@ -24,11 +27,28 @@ PatchSyncClient.prototype.get = function() {
 
 PatchSyncClient.prototype.set = function(data) {
 	this.data = data;
-	when(data).with(this).then(this._initBuffer).then(this._sendNext);
+	this._startSync();
+};
+
+PatchSyncClient.prototype._startSync = function() {
+	if(this._running) {
+		return;
+	}
+	this._running = true;
+	when(this.data).with(this).then(this._initBuffer).then(this._sendNext);
+};
+
+PatchSyncClient.prototype._stopSync = function() {
+	this._running = false;
 };
 
 PatchSyncClient.prototype._initBuffer = function() {
-	this._patchBuffer = [];
+	var patchBuffer = this.store.get();
+	if(patchBuffer == null) {
+		patchBuffer = [];
+		this.store.set(patchBuffer);
+	}
+	return this.store;
 };
 
 PatchSyncClient.prototype.diff = function(data) {
@@ -43,7 +63,10 @@ PatchSyncClient.prototype.diff = function(data) {
 
 PatchSyncClient.prototype.patch = function(patch) {
 	this._patchLocal(patch);
-	this._patchBuffer.push(patch);
+
+	var patchBuffer = this.store.get();
+	patchBuffer.push(patch);
+	this.store.set(patchBuffer);
 };
 
 PatchSyncClient.prototype._patchLocal = function(patch) {
@@ -51,25 +74,31 @@ PatchSyncClient.prototype._patchLocal = function(patch) {
 };
 
 PatchSyncClient.prototype._handleReturnPatch = function(patch) {
-	this._patchBuffer.shift();
-	this._patchLocal(rebase(this._patchBuffer, patch));
+	var patchBuffer = this.store.get();
+	patchBuffer.shift();
+	this.store.set(patchBuffer);
+
+	this._patchLocal(rebase(patchBuffer, patch));
 };
 
 PatchSyncClient.prototype._sendNext = function() {
-	// TODO: This delay should be configurable or externalized
+	if(!this._running) {
+		return when.resolve();
+	}
+
+	var patchBuffer = this.store.get();
+	var patch = (patchBuffer && patchBuffer[0]) || [];
+
+	// TODO: The delay should be configurable or externalized
 	// TODO: Switch to Retry-After
-	return when(this._send(this._patchBuffer)).with(this)
+	return when(this._send(patch)).with(this)
 		.then(this._handleReturnPatch)
 		.catch(function(error) {
 			// TODO: Need to surface this error somehow
 			// TODO: Need a configurable policy on how to handle remote patch failures
 			console.error(error.stack);
 		})
-		.delay(this._patchBuffer.length > 0 ? 500 : 2000)
-		.then(this._sendNext) // Ensure sync loop continues no matter what
+		.delay(patchBuffer.length > 0 ? 500 : 2000)
+		.then(this._sendNext)
 		.with(); // unset thisArg
-};
-
-PatchSyncClient.prototype._send = function(buffer) {
-	return this._sender(buffer[0] || []);
 };
