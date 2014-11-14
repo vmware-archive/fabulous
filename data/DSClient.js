@@ -19,7 +19,7 @@ DSClient.prototype.patch = function(patch) {
 	this._patchLocal(patch);
 
 	this.version += 1;
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 
 	patchBuffer.push({
 		patch: patch,
@@ -27,12 +27,12 @@ DSClient.prototype.patch = function(patch) {
 		remoteVersion: this._remoteVersion
 	});
 
-	this.store.set(patchBuffer);
+	this.patchStore.set(patchBuffer);
 };
 
 DSClient.prototype._initBuffer = function() {
 	PatchSyncClient.prototype._initBuffer.call(this);
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 
 	if(patchBuffer.length > 0) {
 		this.version = patchBuffer[patchBuffer.length - 1].localVersion;
@@ -40,7 +40,8 @@ DSClient.prototype._initBuffer = function() {
 };
 
 DSClient.prototype._handleReturnPatch = function(versionedPatches) {
-	this.data = when(this.data).with(this).then(function(data) {
+	var data = this.dataStore.get();
+	data = when(data).with(this).then(function(data) {
 		var self = this;
 
 		var updated = fn.reduce(function(data, versionedPatch) {
@@ -61,6 +62,9 @@ DSClient.prototype._handleReturnPatch = function(versionedPatches) {
 
 		return updated;
 	});
+
+	this.dataStore.set(data);
+	return data;
 };
 
 DSClient.prototype._pruneChanges = function() {
@@ -68,11 +72,11 @@ DSClient.prototype._pruneChanges = function() {
 	// IOW keep only patches that have a higher remoteVersion
 	// than the version the server just told us it has.
 	var remoteVersion = this._remoteVersion;
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 
 	patchBuffer = fn.filter(function (versionedPatch) {
 		return versionedPatch.remoteVersion > remoteVersion;
 	}, patchBuffer);
 
-	this.store.set(patchBuffer);
+	this.patchStore.set(patchBuffer);
 };

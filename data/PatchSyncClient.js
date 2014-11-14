@@ -12,22 +12,21 @@ var makeContext = context.makeContext(3);
 module.exports = PatchSyncClient;
 
 function PatchSyncClient(send, data, store) {
-	this.data = void 0;
-	this.store = store || new MemoryStore();
+	this.dataStore = data;
+	this.patchStore = store || new MemoryStore();
 
 	this._send = send;
 	this._running = false;
 
-	this.set(data);
+	this._startSync();
 }
 
 PatchSyncClient.prototype.get = function() {
-	return this.data;
+	return this.dataStore.get();
 };
 
 PatchSyncClient.prototype.set = function(data) {
-	this.data = data;
-	this._startSync();
+	this.dataStore.set(data);
 };
 
 PatchSyncClient.prototype._startSync = function() {
@@ -35,7 +34,7 @@ PatchSyncClient.prototype._startSync = function() {
 		return;
 	}
 	this._running = true;
-	when(this.data).with(this).then(this._initBuffer).then(this._sendNext);
+	when(this.get()).with(this).then(this._initBuffer).then(this._sendNext);
 };
 
 PatchSyncClient.prototype._stopSync = function() {
@@ -43,16 +42,16 @@ PatchSyncClient.prototype._stopSync = function() {
 };
 
 PatchSyncClient.prototype._initBuffer = function() {
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 	if(patchBuffer == null) {
 		patchBuffer = [];
-		this.store.set(patchBuffer);
+		this.patchStore.set(patchBuffer);
 	}
-	return this.store;
+	return this.patchStore;
 };
 
 PatchSyncClient.prototype.diff = function(data) {
-	var local = when(this.data).inspect().value;
+	var local = when(this.dataStore.get()).inspect().value;
 
 	if(local === void 0) {
 		return;
@@ -64,19 +63,20 @@ PatchSyncClient.prototype.diff = function(data) {
 PatchSyncClient.prototype.patch = function(patch) {
 	this._patchLocal(patch);
 
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 	patchBuffer.push(patch);
-	this.store.set(patchBuffer);
+	this.patchStore.set(patchBuffer);
 };
 
 PatchSyncClient.prototype._patchLocal = function(patch) {
-	this.data = when(this.data).fold(jiff.patch, patch).orElse(this.data);
+	var data = this.dataStore.get();
+	this.dataStore.set(when(data).fold(jiff.patch, patch).orElse(data));
 };
 
 PatchSyncClient.prototype._handleReturnPatch = function(patch) {
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 	patchBuffer.shift();
-	this.store.set(patchBuffer);
+	this.patchStore.set();
 
 	this._patchLocal(rebase(patchBuffer, patch));
 };
@@ -86,7 +86,7 @@ PatchSyncClient.prototype._sendNext = function() {
 		return when.resolve();
 	}
 
-	var patchBuffer = this.store.get();
+	var patchBuffer = this.patchStore.get();
 	var patch = (patchBuffer && patchBuffer[0]) || [];
 
 	// TODO: The delay should be configurable or externalized
